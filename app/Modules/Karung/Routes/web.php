@@ -9,6 +9,7 @@ use App\Modules\Karung\Http\Controllers\CustomerController; // <-- TAMBAHKAN USE
 use App\Modules\Karung\Http\Controllers\ProductController; // <-- PASTIKAN USE STATEMENT INI ADA
 use App\Modules\Karung\Http\Controllers\PurchaseTransactionController; // <-- TAMBAHKAN USE STATEMENT INI
 use App\Modules\Karung\Http\Controllers\SalesTransactionController; // <-- TAMBAHKAN USE STATEMENT INI
+use App\Modules\Karung\Http\Controllers\ReportController; // <-- TAMBAHKAN USE STATEMENT INI
 
 
 // Rute untuk Dashboard Modul Karung (jika masih dipakai)
@@ -28,6 +29,9 @@ Route::resource('purchases', PurchaseTransactionController::class); // v.normal
 Route::resource('sales', SalesTransactionController::class); // <-- v.normal
 //Route::resource('purchases', PurchaseTransactionController::class)->except(['edit', 'update', 'destroy']); // <-- v.1 (disable delete and edit)
 //Route::resource('sales', SalesTransactionController::class)->except(['edit', 'update', 'destroy']); // <-- v.1 (disable delete and edit)
+
+// Rute Laporan
+Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales'); // <-- TAMBAHKAN BARIS INI
 
 
 // Anda bisa menambahkan resource route lain di bawah ini nanti untuk Produk, Supplier, dll.

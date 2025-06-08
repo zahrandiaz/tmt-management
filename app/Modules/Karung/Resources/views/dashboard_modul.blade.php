@@ -33,6 +33,18 @@
                         </a>
                     </div>
 
+                    {{-- TAMBAHKAN MENU LAPORAN DI SINI --}}
+                    <h5 class="mt-4">Menu Laporan</h5>
+                    <div class="list-group">
+                        <a href="{{ route('karung.reports.sales') }}" class="list-group-item list-group-item-action">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-bar-graph-fill me-2" viewBox="0 0 16 16">
+                                <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M10 9a1 1 0 1 1 2 0v2a1 1 0 1 1-2 0zm-3 1a1 1 0 1 1 2 0v1a1 1 0 1 1-2 0zm-3-3a1 1 0 1 1 2 0v4a1 1 0 1 1-2 0z"/>
+                            </svg>
+                            Laporan Penjualan
+                        </a>
+                         {{-- Nanti link laporan lain di sini --}}
+                    </div>
+
                     {{-- Navigasi Fitur Modul Karung --}}
                     <h5 class="mt-4">Menu Navigasi Modul:</h5>
                     <div class="list-group">
