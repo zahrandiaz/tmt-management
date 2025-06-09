@@ -17,23 +17,32 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request) // Tambahkan Request $request di sini
     {
         // PENTING: Sama seperti sebelumnya, untuk sekarang kita ambil SEMUA produk.
         // Nanti, ini HARUS difilter berdasarkan 'business_unit_id' yang aktif.
-        // $currentBusinessUnitId = 1; // Contoh hardcode, ini harus dinamis
-        // $products = Product::where('business_unit_id', $currentBusinessUnitId)
-        //                     ->with(['category', 'type']) // Eager load relasi
-        //                     ->latest()
-        //                     ->paginate(10);
+        $currentBusinessUnitId = 1; // Contoh hardcode
 
-        // Untuk saat ini, agar bisa lanjut dan tes:
-        $products = Product::with(['category', 'type']) // Eager load relasi category dan type
-                            ->latest()
-                            ->paginate(10);
+        // Mulai query dengan eager loading
+        $query = Product::with(['category', 'type']);
 
-        // Mengirim data $products ke view 'karung::products.index'
-        // Kita akan buat view ini setelah ini.
+        // TODO: Tambahkan filter business_unit_id di sini saat sudah dinamis
+        // $query->where('business_unit_id', $currentBusinessUnitId);
+
+        // Cek apakah ada input pencarian
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            // Tambahkan kondisi where untuk memfilter berdasarkan nama produk ATAU SKU
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                ->orWhere('sku', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Lanjutkan query dengan urutan dan paginasi
+        $products = $query->latest()->paginate(10);
+
+        // Mengirim data $products ke view
         return view('karung::products.index', compact('products'));
     }
 

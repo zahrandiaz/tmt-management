@@ -3,6 +3,7 @@
 namespace App\Modules\Karung\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction; // <-- PASTIKAN BARIS INI ADA
 use Illuminate\Http\Request;
 use Carbon\Carbon; // Kita gunakan Carbon untuk manipulasi tanggal
@@ -37,6 +38,37 @@ class ReportController extends Controller
             'totalRevenue' => $totalRevenue,
             'totalTransactions' => $totalTransactions,
             'startDate' => $startDate->toDateString(), // Kirim tanggal dalam format Y-m-d untuk diisi di form
+            'endDate' => $endDate->toDateString(),
+        ]);
+    }
+
+    public function purchases(Request $request)
+    {
+        // Tentukan tanggal awal dan akhir dari input request.
+        // Jika tidak ada input, gunakan default awal dan akhir bulan ini.
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : Carbon::now()->startOfMonth();
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : Carbon::now()->endOfMonth();
+
+        // TODO: Nantinya, filter transaksi ini berdasarkan business_unit_id yang aktif.
+        // $currentBusinessUnitId = 1;
+
+        // Ambil data transaksi pembelian berdasarkan rentang tanggal
+        $purchases = PurchaseTransaction::with(['supplier', 'user'])
+                                        // ->where('business_unit_id', $currentBusinessUnitId) // Ini untuk nanti
+                                        ->whereBetween('transaction_date', [$startDate, $endDate])
+                                        ->latest('transaction_date') // Urutkan dari tanggal terbaru dalam rentang
+                                        ->get();
+
+        // Hitung ringkasan
+        $totalSpending = $purchases->sum('total_amount');
+        $totalTransactions = $purchases->count();
+
+        // Kirim semua data yang diperlukan ke view
+        return view('karung::reports.purchases_report', [
+            'purchases' => $purchases,
+            'totalSpending' => $totalSpending,
+            'totalTransactions' => $totalTransactions,
+            'startDate' => $startDate->toDateString(),
             'endDate' => $endDate->toDateString(),
         ]);
     }

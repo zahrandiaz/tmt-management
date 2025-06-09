@@ -12,20 +12,28 @@ class SupplierController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request) // Tambahkan Request $request
     {
-        // PENTING: Sama seperti sebelumnya, untuk sekarang kita ambil SEMUA supplier.
-        // Nanti, ini HARUS difilter berdasarkan 'business_unit_id' yang aktif.
-        // $currentBusinessUnitId = 1; // Contoh hardcode, ini harus dinamis
-        // $suppliers = Supplier::where('business_unit_id', $currentBusinessUnitId)
-        //                       ->latest() // Urutkan dari yang terbaru berdasarkan created_at
-        //                       ->paginate(10); // Paginasi 10 item per halaman
+        // TODO: Filter berdasarkan business_unit_id yang aktif.
+        // $currentBusinessUnitId = 1;
 
-        // Untuk saat ini, agar bisa lanjut dan tes:
-        $suppliers = Supplier::latest()->paginate(10);
+        // Mulai query
+        $query = Supplier::query();
 
-        // Mengirim data $suppliers ke view 'karung::suppliers.index'
-        // Kita akan buat view ini setelah ini.
+        // Cek apakah ada input pencarian
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            // Tambahkan kondisi where untuk memfilter berdasarkan nama ATAU kode supplier
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                ->orWhere('supplier_code', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Lanjutkan query dengan urutan dan paginasi
+        $suppliers = $query->latest()->paginate(10);
+
+        // Mengirim data $suppliers ke view
         return view('karung::suppliers.index', compact('suppliers'));
     }
 
