@@ -15,6 +15,61 @@
 
     {{-- <link href="{{ asset('css/tmt_custom.css') }}" rel="stylesheet"> --}}
 
+{{-- CSS Khusus untuk Print (Versi Ditingkatkan) --}}
+<style>
+    @media print {
+        /* Sembunyikan elemen yang tidak perlu dicetak */
+        body > #tmt_app > nav, 
+        body > #tmt_app > footer,
+        .card-header .btn, /* Tombol di card header */
+        .no-print /* Class helper untuk elemen yang tidak ingin dicetak */
+        { 
+            display: none !important; 
+        }
+
+        /* Atur ulang layout utama untuk cetak */
+        body {
+            background-color: white !important; /* Paksa background jadi putih */
+        }
+        main.py-4 {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .container-fluid, .container {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Atur ulang tampilan card agar seperti kertas biasa */
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .card-header {
+            background-color: transparent !important;
+            color: black !important;
+            border-bottom: 1px solid #ddd !important;
+            padding: 0 0 10px 0 !important;
+            text-align: center; /* Judul struk di tengah */
+        }
+        .card-body {
+            padding: 10px 0 0 0 !important;
+        }
+
+        /* Atur ulang tampilan tabel agar lebih mirip struk */
+        .table {
+            font-size: 12px; /* Perkecil font tabel */
+            color: black !important;
+        }
+        .table-dark th {
+            background-color: #f2f2f2 !important; /* Ganti header tabel jadi abu-abu muda */
+            color: black !important;
+            border-color: #ddd !important;
+        }
+    }
+</style>
+
     @stack('head-scripts')
 </head>
 <body>

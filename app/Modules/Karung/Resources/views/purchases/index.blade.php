@@ -1,4 +1,4 @@
-@extends('layouts.tmt_app') {{-- Menggunakan layout utama TMT --}}
+@extends('layouts.tmt_app')
 
 @section('title', 'Riwayat Transaksi Pembelian - Modul Toko Karung')
 
@@ -30,7 +30,6 @@
                         </div>
                     @endif
 
-                    {{-- === FORM PENCARIAN DIMULAI DI SINI === --}}
                     <div class="mb-4">
                         <form action="{{ route('karung.purchases.index') }}" method="GET">
                             <div class="input-group">
@@ -44,7 +43,6 @@
                             </div>
                         </form>
                     </div>
-                    {{-- === FORM PENCARIAN SELESAI DI SINI === --}}
 
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
@@ -54,8 +52,9 @@
                                     <th scope="col">Tanggal</th>
                                     <th scope="col">No. Referensi</th>
                                     <th scope="col">Supplier</th>
+                                    <th scope="col">Produk Dibeli</th> {{-- <-- KOLOM BARU --}}
                                     <th scope="col" class="text-end">Total Pembelian</th>
-                                    <th scope="col">Dicatat Oleh</th>
+                                    {{-- <th scope="col">Dicatat Oleh</th> --}} {{-- <-- KOLOM LAMA DIHAPUS --}}
                                     <th scope="col" style="width: 15%;" class="text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -66,24 +65,25 @@
                                         <td>{{ $purchase->transaction_date->format('d-m-Y') }}</td>
                                         <td>{{ $purchase->purchase_reference_no ?: '-' }}</td>
                                         <td>{{ $purchase->supplier?->name ?: 'Pembelian Umum' }}</td>
+                                        <td> {{-- <-- SEL DATA BARU --}}
+                                            {{-- Mengambil semua nama produk dari detail, lalu menggabungkannya dengan koma --}}
+                                            {{ $purchase->details->pluck('product.name')->implode(', ') }}
+                                        </td>
                                         <td class="text-end">Rp {{ number_format($purchase->total_amount, 0, ',', '.') }}</td>
-                                        <td>{{ $purchase->user?->name ?: 'N/A' }}</td>
+                                        {{-- <td>{{ $purchase->user?->name ?: 'N/A' }}</td> --}} {{-- <-- SEL DATA LAMA DIHAPUS --}}
                                         <td class="text-center">
-                                            {{-- Tombol Detail/Show - Rute akan kita buat nanti --}}
                                             <a href="{{ route('karung.purchases.show', $purchase->id) }}" class="btn btn-info btn-sm text-white" title="Lihat Detail">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
                                                     <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
                                                     <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
                                                 </svg>
                                             </a>
-                                            {{-- Tombol Edit - Untuk transaksi, edit mungkin terbatas --}}
                                             <a href="{{ route('karung.purchases.edit', $purchase->id) }}" class="btn btn-warning btn-sm" title="Edit">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
                                                     <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
                                                     <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
                                                 </svg>
                                             </a>
-                                            {{-- Tombol Hapus - Hati-hati dengan penghapusan transaksi --}}
                                             <form action="{{ route('karung.purchases.destroy', $purchase->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus transaksi pembelian ini? Menghapus ini tidak akan mengembalikan stok (jika stok otomatis aktif).');">
                                                 @csrf
                                                 @method('DELETE')
@@ -97,7 +97,8 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center">Tidak ada data transaksi pembelian.</td> {{-- Sesuaikan colspan --}}
+                                        {{-- Jumlah colspan tetap 7 karena kita hapus 1 kolom, tambah 1 kolom --}}
+                                        <td colspan="7" class="text-center">Tidak ada data transaksi pembelian.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

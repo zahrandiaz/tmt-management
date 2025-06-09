@@ -10,7 +10,13 @@
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Detail Transaksi Penjualan: #{{ $sale->invoice_number }}</h5>
                     <div>
-                        {{-- <a href="#" class="btn btn-light btn-sm">Cetak Struk</a> --}}
+                        {{-- TOMBOL CETAK BARU --}}
+                        <button type="button" onclick="window.print()" class="btn btn-light btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer-fill me-1" viewBox="0 0 16 16">
+                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4zm1 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-1 2a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1z"/>
+                            </svg>
+                            Cetak Struk
+                        </button>
                         <a href="{{ route('karung.sales.index') }}" class="btn btn-outline-light btn-sm">
                             &larr; Kembali ke Daftar Penjualan
                         </a>

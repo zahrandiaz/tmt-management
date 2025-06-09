@@ -2,13 +2,12 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-
 use App\Http\Controllers\Controller;
-use App\Modules\Karung\Models\SalesTransaction; // Pastikan ini sudah benar
+use App\Modules\Karung\Models\SalesTransaction;
 use App\Modules\Karung\Models\Customer;
 use App\Modules\Karung\Models\Product;
-use Illuminate\Support\Facades\DB; // PENTING untuk Database Transaction
-use Illuminate\Support\Str; // Untuk helper string jika perlu
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
 class SalesTransactionController extends Controller
@@ -16,13 +15,14 @@ class SalesTransactionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request) // Tambahkan Request $request
+    public function index(Request $request)
     {
         // TODO: Filter berdasarkan business_unit_id yang aktif.
         // $currentBusinessUnitId = 1;
 
         // Mulai query dengan eager loading
-        $query = SalesTransaction::with(['customer', 'user']);
+        // DIUBAH: Kita ganti 'user' menjadi 'details.product' untuk mengambil nama produk
+        $query = SalesTransaction::with(['customer', 'details.product']);
 
         // Cek apakah ada input pencarian
         if ($request->filled('search')) {
@@ -30,9 +30,9 @@ class SalesTransactionController extends Controller
             // Tambahkan kondisi where untuk memfilter berdasarkan No. Invoice ATAU Nama Pelanggan (dari relasi)
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('invoice_number', 'like', '%' . $searchTerm . '%')
-                ->orWhereHas('customer', function ($customerQuery) use ($searchTerm) {
-                    $customerQuery->where('name', 'like', '%' . $searchTerm . '%');
-                });
+                  ->orWhereHas('customer', function ($customerQuery) use ($searchTerm) {
+                      $customerQuery->where('name', 'like', '%' . $searchTerm . '%');
+                  });
             });
         }
 
@@ -42,7 +42,7 @@ class SalesTransactionController extends Controller
         // Mengirim data $sales ke view
         return view('karung::sales.index', compact('sales'));
     }
-    
+
     public function create()
     {
         // TODO: Nantinya, data ini (customers, products)
@@ -74,7 +74,7 @@ class SalesTransactionController extends Controller
             DB::beginTransaction();
 
             // 1. Siapkan dan Simpan data Transaksi Induk (tanpa total_amount dulu)
-            $purchaseData = [
+            $saleData = [
                 'business_unit_id'      => 1, // TODO: Harus dinamis
                 'customer_id'           => $validatedData['customer_id'],
                 'transaction_date'      => $validatedData['transaction_date'],
@@ -83,7 +83,7 @@ class SalesTransactionController extends Controller
                 'invoice_number'        => 'INV/'.date('Ymd').'/'.strtoupper(Str::random(6)), // Contoh pembuatan invoice number sederhana
             ];
 
-            $sale = SalesTransaction::create($purchaseData);
+            $sale = SalesTransaction::create($saleData);
 
             // 2. Loop dan Simpan data Detail Transaksi
             $totalAmount = 0;
@@ -100,8 +100,6 @@ class SalesTransactionController extends Controller
                 $totalAmount += $subTotal;
 
                 // PERJANJIAN: Untuk V1, kita TIDAK update stok produk di master data secara otomatis.
-                // Jika nanti fitur stok otomatis diaktifkan, kodenya akan ada di sini
-                // untuk MENGURANGI stok.
             }
 
             // 3. Update total_amount di Transaksi Induk
@@ -112,7 +110,7 @@ class SalesTransactionController extends Controller
             DB::commit();
 
             return redirect()->route('karung.sales.index')
-                            ->with('success', 'Transaksi penjualan baru berhasil disimpan!');
+                             ->with('success', 'Transaksi penjualan baru berhasil disimpan!');
 
         } catch (\Exception $e) {
             // Jika terjadi error, batalkan semua query yang sudah dijalankan
@@ -135,6 +133,6 @@ class SalesTransactionController extends Controller
 
         return view('karung::sales.show', compact('sale'));
     }
-
-    // ... (method CRUD lainnya: edit, update, destroy) ...
+    
+    // ... (method CRUD lainnya yang ditunda: edit, update, destroy) ...
 }

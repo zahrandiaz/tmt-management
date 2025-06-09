@@ -94,38 +94,42 @@ class ReportController extends Controller
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : Carbon::now()->startOfMonth();
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : Carbon::now()->endOfMonth();
 
-        // TODO: Nantinya, filter transaksi ini berdasarkan business_unit_id yang aktif.
-
-        // Ambil SEMUA DETAIL PENJUALAN dalam rentang tanggal tertentu.
-        // Kita filter berdasarkan tanggal di transaksi induknya ('transaction').
-        $salesDetails = SalesTransactionDetail::with('transaction.customer', 'product')
+        // Ambil SEMUA DETAIL PENJUALAN dalam rentang tanggal
+        $salesDetails = SalesTransactionDetail::with('transaction', 'product')
             ->whereHas('transaction', function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('transaction_date', [$startDate, $endDate]);
             })
             ->get();
 
         // Inisialisasi variabel untuk kalkulasi
-        $totalRevenue = 0; // Total pendapatan
-        $totalCost = 0;    // Total modal / HPP
+        $totalRevenue = 0; // Total pendapatan (omzet)
+        $totalCost = 0;    // Total modal barang terjual (HPP)
 
         foreach ($salesDetails as $detail) {
             $totalRevenue += $detail->sub_total;
-
-            // Ambil harga beli referensi dari master produk.
-            // Gunakan null-safe operator (?->) untuk keamanan jika produk sudah dihapus.
             $purchasePrice = $detail->product?->purchase_price ?? 0;
             $totalCost += $detail->quantity * $purchasePrice;
         }
 
         // Hitung Laba Kotor
-        $totalProfit = $totalRevenue - $totalCost;
+        $grossProfit = $totalRevenue - $totalCost;
+
+        // --- BAGIAN BARU DIMULAI DI SINI ---
+        // Hitung Total Pembelian Baru pada periode yang sama
+        $totalPurchases = PurchaseTransaction::whereBetween('transaction_date', [$startDate, $endDate])->sum('total_amount');
+
+        // Hitung Laba Bersih (versi Anda)
+        $netProfit = $grossProfit - $totalPurchases;
+        // --- AKHIR BAGIAN BARU ---
 
 
         return view('karung::reports.profit_loss_report', [
             'salesDetails'      => $salesDetails,
             'totalRevenue'      => $totalRevenue,
             'totalCost'         => $totalCost,
-            'totalProfit'       => $totalProfit,
+            'grossProfit'       => $grossProfit, // Ganti nama variabel agar lebih jelas
+            'totalPurchases'    => $totalPurchases, // Kirim data total pembelian
+            'netProfit'         => $netProfit,      // Kirim data laba bersih
             'startDate'         => $startDate->toDateString(),
             'endDate'           => $endDate->toDateString(),
         ]);

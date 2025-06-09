@@ -1,4 +1,4 @@
-@extends('layouts.tmt_app') {{-- Menggunakan layout utama TMT --}}
+@extends('layouts.tmt_app')
 
 @section('title', 'Riwayat Transaksi Penjualan - Modul Toko Karung')
 
@@ -30,7 +30,6 @@
                         </div>
                     @endif
 
-                    {{-- === FORM PENCARIAN DIMULAI DI SINI === --}}
                     <div class="mb-4">
                         <form action="{{ route('karung.sales.index') }}" method="GET">
                             <div class="input-group">
@@ -44,7 +43,6 @@
                             </div>
                         </form>
                     </div>
-                    {{-- === FORM PENCARIAN SELESAI DI SINI === --}}
 
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
@@ -54,9 +52,10 @@
                                     <th scope="col">Tanggal</th>
                                     <th scope="col">No. Invoice</th>
                                     <th scope="col">Pelanggan</th>
+                                    <th scope="col">Produk Dijual</th> {{-- <-- KOLOM BARU --}}
                                     <th scope="col" class="text-end">Total Penjualan</th>
-                                    <th scope="col">Dicatat Oleh</th>
-                                    <th scope="col" style="width: 15%;" class="text-center">Aksi</th>
+                                    {{-- <th scope="col">Dicatat Oleh</th> --}} {{-- <-- KOLOM LAMA DIHAPUS --}}
+                                    <th scope="col" style="width: 10%;" class="text-center">Aksi</th> {{-- Lebar Aksi disesuaikan --}}
                                 </tr>
                             </thead>
                             <tbody>
@@ -66,24 +65,24 @@
                                         <td>{{ $sale->transaction_date->format('d-m-Y H:i') }}</td>
                                         <td>{{ $sale->invoice_number }}</td>
                                         <td>{{ $sale->customer?->name ?: 'Penjualan Umum' }}</td>
+                                        <td> {{-- <-- SEL DATA BARU --}}
+                                            {{ $sale->details->pluck('product.name')->implode(', ') }}
+                                        </td>
                                         <td class="text-end">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</td>
-                                        <td>{{ $sale->user?->name ?: 'N/A' }}</td>
+                                        {{-- <td>{{ $sale->user?->name ?: 'N/A' }}</td> --}} {{-- <-- SEL DATA LAMA DIHAPUS --}}
                                         <td class="text-center">
-                                            {{-- Tombol Detail/Show - Rute akan kita buat nanti --}}
                                             <a href="{{ route('karung.sales.show', $sale->id) }}" class="btn btn-info btn-sm text-white" title="Lihat Detail">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
                                                     <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
                                                     <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
                                                 </svg>
                                             </a>
-                                            {{-- Untuk transaksi Penjualan, fitur Edit & Hapus akan kita tunda sesuai kesepakatan --}}
-                                            {{-- <a href="{{ route('karung.sales.edit', $sale->id) }}" class="btn btn-warning btn-sm" title="Edit">...</a> --}}
-                                            {{-- <form action="{{ route('karung.sales.destroy', $sale->id) }}" method="POST" class="d-inline" ...>...</form> --}}
+                                            {{-- Sesuai kesepakatan, tombol Edit dan Hapus disembunyikan untuk transaksi --}}
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center">Tidak ada data transaksi penjualan.</td> {{-- Sesuaikan colspan --}}
+                                        <td colspan="7" class="text-center">Tidak ada data transaksi penjualan.</td> {{-- Colspan tetap 7 --}}
                                     </tr>
                                 @endforelse
                             </tbody>

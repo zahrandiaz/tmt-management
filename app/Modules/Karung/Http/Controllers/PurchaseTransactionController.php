@@ -3,10 +3,10 @@
 namespace App\Modules\Karung\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Karung\Models\PurchaseTransaction; // Pastikan ini sudah benar
+use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\Supplier;
 use App\Modules\Karung\Models\Product;
-use Illuminate\Support\Facades\DB; // <-- PENTING untuk Database Transaction
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 
@@ -15,13 +15,14 @@ class PurchaseTransactionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request) // Tambahkan Request $request
+    public function index(Request $request)
     {
         // TODO: Filter berdasarkan business_unit_id yang aktif.
         // $currentBusinessUnitId = 1;
 
         // Mulai query dengan eager loading
-        $query = PurchaseTransaction::with(['supplier', 'user']);
+        // DIUBAH: Kita ganti 'user' menjadi 'details.product' untuk mengambil nama produk
+        $query = PurchaseTransaction::with(['supplier', 'details.product']);
 
         // Cek apakah ada input pencarian
         if ($request->filled('search')) {
@@ -29,9 +30,9 @@ class PurchaseTransactionController extends Controller
             // Tambahkan kondisi where untuk memfilter berdasarkan No. Referensi ATAU Nama Supplier (dari relasi)
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('purchase_reference_no', 'like', '%' . $searchTerm . '%')
-                ->orWhereHas('supplier', function ($supplierQuery) use ($searchTerm) {
-                    $supplierQuery->where('name', 'like', '%' . $searchTerm . '%');
-                });
+                  ->orWhereHas('supplier', function ($supplierQuery) use ($searchTerm) {
+                      $supplierQuery->where('name', 'like', '%' . $searchTerm . '%');
+                  });
             });
         }
 
@@ -117,7 +118,7 @@ class PurchaseTransactionController extends Controller
             DB::commit();
 
             return redirect()->route('karung.purchases.index')
-                            ->with('success', 'Transaksi pembelian baru berhasil disimpan!');
+                             ->with('success', 'Transaksi pembelian baru berhasil disimpan!');
 
         } catch (\Exception $e) {
             // Jika terjadi error, batalkan semua query yang sudah dijalankan
@@ -125,8 +126,8 @@ class PurchaseTransactionController extends Controller
 
             // Tampilkan pesan error
             return redirect()->back()
-                            ->with('error', 'Terjadi kesalahan saat menyimpan transaksi pembelian: ' . $e->getMessage())
-                            ->withInput();
+                             ->with('error', 'Terjadi kesalahan saat menyimpan transaksi pembelian: ' . $e->getMessage())
+                             ->withInput();
         }
     }
 
