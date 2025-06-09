@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction; // <-- PASTIKAN BARIS INI ADA
 use App\Modules\Karung\Models\Product;
+use App\Modules\Karung\Models\SalesTransactionDetail;
 use Illuminate\Http\Request;
 use Carbon\Carbon; // Kita gunakan Carbon untuk manipulasi tanggal
 
@@ -85,6 +86,48 @@ class ReportController extends Controller
         // Kirim data yang diperlukan ke view
         return view('karung::reports.stock_report', [
             'products' => $products,
+        ]);
+    }
+
+    public function profitAndLoss(Request $request)
+    {
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : Carbon::now()->startOfMonth();
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : Carbon::now()->endOfMonth();
+
+        // TODO: Nantinya, filter transaksi ini berdasarkan business_unit_id yang aktif.
+
+        // Ambil SEMUA DETAIL PENJUALAN dalam rentang tanggal tertentu.
+        // Kita filter berdasarkan tanggal di transaksi induknya ('transaction').
+        $salesDetails = SalesTransactionDetail::with('transaction.customer', 'product')
+            ->whereHas('transaction', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('transaction_date', [$startDate, $endDate]);
+            })
+            ->get();
+
+        // Inisialisasi variabel untuk kalkulasi
+        $totalRevenue = 0; // Total pendapatan
+        $totalCost = 0;    // Total modal / HPP
+
+        foreach ($salesDetails as $detail) {
+            $totalRevenue += $detail->sub_total;
+
+            // Ambil harga beli referensi dari master produk.
+            // Gunakan null-safe operator (?->) untuk keamanan jika produk sudah dihapus.
+            $purchasePrice = $detail->product?->purchase_price ?? 0;
+            $totalCost += $detail->quantity * $purchasePrice;
+        }
+
+        // Hitung Laba Kotor
+        $totalProfit = $totalRevenue - $totalCost;
+
+
+        return view('karung::reports.profit_loss_report', [
+            'salesDetails'      => $salesDetails,
+            'totalRevenue'      => $totalRevenue,
+            'totalCost'         => $totalCost,
+            'totalProfit'       => $totalProfit,
+            'startDate'         => $startDate->toDateString(),
+            'endDate'           => $endDate->toDateString(),
         ]);
     }
     // Nanti kita tambahkan method untuk laporan lain di sini
