@@ -22,7 +22,8 @@
         <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
             <div class="container">
                 <a class="navbar-brand" href="{{ url('/') }}">
-                    {{ config('app.name', 'Laravel') }} </a>
+                    {{ config('app.name', 'Laravel') }}
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -31,8 +32,23 @@
                     <ul class="navbar-nav me-auto">
                         @auth
                             <li class="nav-item">
-                                <a class="nav-link" href="#">Dashboard TMT</a> </li>
-                            @endauth
+                                {{-- Mengarahkan ke route 'dashboard' yang sudah kita atur --}}
+                                <a class="nav-link" href="{{ route('dashboard') }}">Dashboard TMT</a>
+                            </li>
+
+                            {{-- === BLOK KODE BARU DIMULAI DI SINI === --}}
+                            @role('Super Admin TMT')
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('tmt.admin.users.index') }}">Manajemen Pengguna</a>
+                            </li>
+                            {{-- Di sini nanti bisa ditambahkan link untuk Manajemen Peran, dll. --}}
+                            <li class="nav-item"> {{-- <-- TAMBAHKAN BLOK LI INI --}}
+                                <a class="nav-link" href="{{ route('tmt.admin.roles.index') }}">Manajemen Peran</a>
+                            </li>
+                            @endrole
+                            {{-- === BLOK KODE BARU SELESAI DI SINI === --}}
+
+                        @endauth
                     </ul>
 
                     <ul class="navbar-nav ms-auto">
@@ -55,8 +71,10 @@
                                 </a>
 
                                 <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="#">
-                                        Profil Saya </a>
+                                    {{-- Mengarahkan ke halaman profil yang dibuat Breeze --}}
+                                    <a class="dropdown-item" href="{{ route('profile.edit') }}">
+                                        Profil Saya
+                                     </a>
                                     <a class="dropdown-item" href="{{ route('logout') }}"
                                        onclick="event.preventDefault();
                                                      document.getElementById('logout-form').submit();">
@@ -76,7 +94,8 @@
 
         <main class="py-4">
             <div class="container">
-                @yield('content') </div>
+                @yield('content')
+            </div>
         </main>
 
         <footer class="py-4 mt-auto bg-light">

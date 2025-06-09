@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\ProfileController; // Pastikan ProfileController ada atau akan dibuat Breeze
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Tmt\UserController;
+use App\Http\Controllers\Tmt\RoleController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -25,6 +27,17 @@ Route::middleware('auth')->group(function () {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     }
+});
+
+// --- TAMBAHKAN GRUP RUTE UNTUK TMT ADMIN DI SINI ---
+Route::middleware(['auth', 'verified', 'role:Super Admin TMT'])->prefix('tmt-admin')->name('tmt.admin.')->group(function () {
+    // Rute untuk Manajemen Pengguna
+    Route::resource('users', UserController::class);
+
+    // Rute untuk Manajemen Peran
+    Route::resource('roles', RoleController::class); // <-- TAMBAHKAN BARIS INI
+
+    // Nanti rute untuk manajemen Peran, Izin, dan Pengaturan TMT bisa diletakkan di sini juga
 });
 
 require __DIR__.'/auth.php';
