@@ -41,6 +41,7 @@ Route::resource('sales', SalesTransactionController::class)->middleware(['permis
 // Grup untuk laporan
 Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales')->middleware(['permission:karung.view_reports']); // after fixing bug
 Route::get('/reports/purchases', [ReportController::class, 'purchases'])->name('reports.purchases')->middleware(['permission:karung.view_reports']); // <-- TAMBAHKAN BARIS INI
+Route::get('/reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock')->middleware(['permission:karung.view_reports']);
 
 // --- TAMBAHKAN GRUP RUTE UNTUK TMT ADMIN DI SINI ---
 Route::middleware(['auth', 'verified', 'role:Super Admin TMT'])->prefix('tmt-admin')->name('tmt.admin.')->group(function () {

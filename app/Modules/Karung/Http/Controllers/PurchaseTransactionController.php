@@ -15,22 +15,30 @@ class PurchaseTransactionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request) // Tambahkan Request $request
     {
-        // TODO: Nantinya, filter transaksi pembelian ini berdasarkan business_unit_id yang aktif.
-        // $currentBusinessUnitId = 1; // Contoh
-        // $purchases = PurchaseTransaction::where('business_unit_id', $currentBusinessUnitId)
-        //                                 ->with(['supplier', 'user']) // Eager load relasi supplier dan user
-        //                                 ->latest()
-        //                                 ->paginate(15);
+        // TODO: Filter berdasarkan business_unit_id yang aktif.
+        // $currentBusinessUnitId = 1;
 
-        // Untuk saat ini, agar bisa lanjut dan tes, kita ambil semua data dulu
-        $purchases = PurchaseTransaction::with(['supplier', 'user'])
-                                        ->latest() // Urutkan dari transaksi terbaru
-                                        ->paginate(15); // Paginasi 15 item per halaman
+        // Mulai query dengan eager loading
+        $query = PurchaseTransaction::with(['supplier', 'user']);
 
-        // Mengirim data $purchases ke view 'karung::purchases.index'
-        // Kita akan buat view ini setelah ini.
+        // Cek apakah ada input pencarian
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            // Tambahkan kondisi where untuk memfilter berdasarkan No. Referensi ATAU Nama Supplier (dari relasi)
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('purchase_reference_no', 'like', '%' . $searchTerm . '%')
+                ->orWhereHas('supplier', function ($supplierQuery) use ($searchTerm) {
+                    $supplierQuery->where('name', 'like', '%' . $searchTerm . '%');
+                });
+            });
+        }
+
+        // Lanjutkan query dengan urutan dan paginasi
+        $purchases = $query->latest('transaction_date')->paginate(15);
+
+        // Mengirim data $purchases ke view
         return view('karung::purchases.index', compact('purchases'));
     }
 

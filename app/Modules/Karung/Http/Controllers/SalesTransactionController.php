@@ -16,25 +16,33 @@ class SalesTransactionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request) // Tambahkan Request $request
     {
-        // TODO: Nantinya, filter transaksi penjualan ini berdasarkan business_unit_id yang aktif.
-        // $currentBusinessUnitId = 1; // Contoh
-        // $sales = SalesTransaction::where('business_unit_id', $currentBusinessUnitId)
-        //                                 ->with(['customer', 'user']) // Eager load relasi customer dan user
-        //                                 ->latest()
-        //                                 ->paginate(15);
+        // TODO: Filter berdasarkan business_unit_id yang aktif.
+        // $currentBusinessUnitId = 1;
 
-        // Untuk saat ini, agar bisa lanjut dan tes, kita ambil semua data dulu
-        $sales = SalesTransaction::with(['customer', 'user'])
-                                        ->latest() // Urutkan dari transaksi terbaru
-                                        ->paginate(15); // Paginasi 15 item per halaman
+        // Mulai query dengan eager loading
+        $query = SalesTransaction::with(['customer', 'user']);
 
-        // Mengirim data $sales ke view 'karung::sales.index'
-        // Kita akan buat view ini setelah ini.
+        // Cek apakah ada input pencarian
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            // Tambahkan kondisi where untuk memfilter berdasarkan No. Invoice ATAU Nama Pelanggan (dari relasi)
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('invoice_number', 'like', '%' . $searchTerm . '%')
+                ->orWhereHas('customer', function ($customerQuery) use ($searchTerm) {
+                    $customerQuery->where('name', 'like', '%' . $searchTerm . '%');
+                });
+            });
+        }
+
+        // Lanjutkan query dengan urutan dan paginasi
+        $sales = $query->latest()->paginate(15);
+
+        // Mengirim data $sales ke view
         return view('karung::sales.index', compact('sales'));
     }
-
+    
     public function create()
     {
         // TODO: Nantinya, data ini (customers, products)

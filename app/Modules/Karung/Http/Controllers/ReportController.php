@@ -5,6 +5,7 @@ namespace App\Modules\Karung\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction; // <-- PASTIKAN BARIS INI ADA
+use App\Modules\Karung\Models\Product;
 use Illuminate\Http\Request;
 use Carbon\Carbon; // Kita gunakan Carbon untuk manipulasi tanggal
 
@@ -73,5 +74,18 @@ class ReportController extends Controller
         ]);
     }
 
+    public function stockReport(Request $request)
+    {
+        // Mulai query dengan eager loading untuk relasi
+        $query = Product::with(['category', 'type']);
+
+        // Lanjutkan query dengan urutan dan paginasi
+        $products = $query->orderBy('name', 'asc')->paginate(20);
+
+        // Kirim data yang diperlukan ke view
+        return view('karung::reports.stock_report', [
+            'products' => $products,
+        ]);
+    }
     // Nanti kita tambahkan method untuk laporan lain di sini
 }

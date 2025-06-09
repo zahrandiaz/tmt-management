@@ -12,20 +12,18 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // PENTING: Sama seperti sebelumnya, untuk sekarang kita ambil SEMUA pelanggan.
-        // Nanti, ini HARUS difilter berdasarkan 'business_unit_id' yang aktif.
-        // $currentBusinessUnitId = 1; // Contoh hardcode, ini harus dinamis
-        // $customers = Customer::where('business_unit_id', $currentBusinessUnitId)
-        //                       ->latest() // Urutkan dari yang terbaru berdasarkan created_at
-        //                       ->paginate(10); // Paginasi 10 item per halaman
-
-        // Untuk saat ini, agar bisa lanjut dan tes:
-        $customers = Customer::latest()->paginate(10);
-
-        // Mengirim data $customers ke view 'karung::customers.index'
-        // Kita akan buat view ini setelah ini.
+        $query = Customer::query();
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                ->orWhere('customer_code', 'like', '%' . $searchTerm . '%')
+                ->orWhere('email', 'like', '%' . $searchTerm . '%');
+            });
+        }
+        $customers = $query->latest()->paginate(10);
         return view('karung::customers.index', compact('customers'));
     }
 

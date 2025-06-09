@@ -31,6 +31,16 @@
                         </div>
                     @endif
 
+                    {{-- FORM PENCARIAN GENERIC --}}
+                    <div class="mb-4">
+                        <form action="{{ route('karung.customers.index') }}" method="GET">
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="search" placeholder="Cari berdasarkan..." value="{{ request('search') }}">
+                                <button class="btn btn-primary" type="submit">Cari</button>
+                            </div>
+                        </form>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="table-dark">
@@ -78,7 +88,7 @@
                         </table>
                     </div>
                     <div class="mt-3">
-                        {{ $customers->links() }}
+                        {{ $customers->appends(request()->query())->links() }}
                     </div>
                 </div>
             </div>

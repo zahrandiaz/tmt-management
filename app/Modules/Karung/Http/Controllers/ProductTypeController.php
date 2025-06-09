@@ -12,21 +12,14 @@ class ProductTypeController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        // PENTING: Sama seperti Kategori Produk, untuk sekarang kita ambil SEMUA jenis produk.
-        // Nanti, ini HARUS difilter berdasarkan 'business_unit_id' yang aktif.
-        // $currentBusinessUnitId = 1; // Contoh hardcode, ini harus dinamis
-        // $types = ProductType::where('business_unit_id', $currentBusinessUnitId)
-        //                     ->latest()
-        //                     ->paginate(10);
-
-        // Untuk saat ini, agar bisa lanjut dan tes:
-        $types = ProductType::latest()->paginate(10);
-
-        // Mengirim data $types ke view 'karung::product_types.index'
-        // Kita akan buat view ini setelah ini.
+        $query = ProductType::query();
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where('name', 'like', '%' . $searchTerm . '%');
+        }
+        $types = $query->latest()->paginate(10);
         return view('karung::product_types.index', compact('types'));
     }
 

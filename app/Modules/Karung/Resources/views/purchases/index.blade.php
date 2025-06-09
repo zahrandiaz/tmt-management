@@ -30,6 +30,22 @@
                         </div>
                     @endif
 
+                    {{-- === FORM PENCARIAN DIMULAI DI SINI === --}}
+                    <div class="mb-4">
+                        <form action="{{ route('karung.purchases.index') }}" method="GET">
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="search" placeholder="Cari berdasarkan No. Referensi atau Nama Supplier..." value="{{ request('search') }}">
+                                <button class="btn btn-primary" type="submit">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                                    </svg>
+                                    Cari
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {{-- === FORM PENCARIAN SELESAI DI SINI === --}}
+
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="table-dark">
@@ -88,7 +104,7 @@
                         </table>
                     </div>
                     <div class="mt-3">
-                        {{ $purchases->links() }}
+                        {{ $purchases->appends(request()->query())->links() }}
                     </div>
                 </div>
             </div>

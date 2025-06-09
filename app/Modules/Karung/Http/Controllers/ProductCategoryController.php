@@ -12,23 +12,14 @@ class ProductCategoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // PENTING: Untuk sekarang, kita akan mengambil SEMUA kategori produk.
-        // Nanti, saat sistem "Instansi Bisnis" di TMT Management sudah lebih matang,
-        // kita HARUS memfilter ini berdasarkan 'business_unit_id' dari instansi
-        // toko karung yang sedang aktif diakses oleh pengguna.
-        // Contoh (JANGAN DIGUNAKAN DULU, HANYA ILUSTRASI):
-        // $currentBusinessUnitId = session('current_business_unit_id'); // Ini asumsi cara dapat ID unit
-        // $categories = ProductCategory::where('business_unit_id', $currentBusinessUnitId)
-        //                              ->latest() // Urutkan dari yang terbaru
-        //                              ->paginate(10); // Paginasi 10 item per halaman
-
-        // Untuk saat ini, agar bisa lanjut dan tes:
-        $categories = ProductCategory::latest()->paginate(10);
-
-        // Mengirim data $categories ke view 'karung::product_categories.index'
-        // Kita akan buat view ini setelah ini.
+        $query = ProductCategory::query();
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where('name', 'like', '%' . $searchTerm . '%');
+        }
+        $categories = $query->latest()->paginate(10);
         return view('karung::product_categories.index', compact('categories'));
     }
 
