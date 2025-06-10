@@ -1,55 +1,63 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Tmt\UserController;
-use App\Modules\Karung\Http\Controllers\DashboardController; // Biarkan ini jika Anda masih ingin menggunakan Dashboard Modul Karung
-use App\Modules\Karung\Http\Controllers\ProductCategoryController; // <-- TAMBAHKAN USE STATEMENT INI
-use App\Modules\Karung\Http\Controllers\ProductTypeController; // <-- TAMBAHKAN USE STATEMENT INI
-use App\Modules\Karung\Http\Controllers\SupplierController; // <-- TAMBAHKAN USE STATEMENT INI
-use App\Modules\Karung\Http\Controllers\CustomerController; // <-- TAMBAHKAN USE STATEMENT INI
-use App\Modules\Karung\Http\Controllers\ProductController; // <-- PASTIKAN USE STATEMENT INI ADA
-use App\Modules\Karung\Http\Controllers\PurchaseTransactionController; // <-- TAMBAHKAN USE STATEMENT INI
-use App\Modules\Karung\Http\Controllers\SalesTransactionController; // <-- TAMBAHKAN USE STATEMENT INI
-use App\Modules\Karung\Http\Controllers\ReportController; // <-- TAMBAHKAN USE STATEMENT INI
+use App\Modules\Karung\Http\Controllers\DashboardController;
+use App\Modules\Karung\Http\Controllers\ProductCategoryController;
+use App\Modules\Karung\Http\Controllers\ProductTypeController;
+use App\Modules\Karung\Http\Controllers\SupplierController;
+use App\Modules\Karung\Http\Controllers\CustomerController;
+use App\Modules\Karung\Http\Controllers\ProductController;
+use App\Modules\Karung\Http\Controllers\PurchaseTransactionController;
+use App\Modules\Karung\Http\Controllers\SalesTransactionController;
+use App\Modules\Karung\Http\Controllers\ReportController;
 
+/*
+|--------------------------------------------------------------------------
+| Web Routes for Karung Module
+|--------------------------------------------------------------------------
+|
+| Semua rute di file ini secara otomatis akan memiliki:
+| - Prefix URL: '/tmt/karung'
+| - Prefix Nama Rute: 'karung.'
+| - Middleware: 'web', 'auth', 'verified'
+| Ini semua diatur terpusat di KarungServiceProvider.php
+|
+*/
 
-// Rute untuk Dashboard Modul Karung (jika masih dipakai)
-//Route::get('/dashboard-modul', [DashboardController::class, 'index'])->name('dashboard');
-Route::get('/dashboard-modul', [DashboardController::class, 'index'])->name('dashboard')->middleware(['permission:karung.access_module']);
-// Saya ganti URLnya menjadi /dashboard-modul agar tidak bentrok dengan /dashboard TMT
-// dan nama rutenya tetap 'dashboard' (yang akan menjadi 'karung.dashboard')
+// Rute untuk Dashboard Modul Karung
+Route::get('/dashboard-modul', [DashboardController::class, 'index'])->name('dashboard')->middleware('permission:karung.access_module');
 
-// Grup untuk master data (anggap saja butuh izin 'manage_products' untuk kelola semua master data) // after fixing bug
-Route::middleware(['permission:karung.manage_products'])->group(function () {
-    Route::resource('product-categories', ProductCategoryController::class);
-    Route::resource('product-types', ProductTypeController::class);
-    Route::resource('suppliers', SupplierController::class);
-    Route::resource('customers', CustomerController::class);
-    Route::resource('products', ProductController::class); 
+// --- Rute Master Data ---
+Route::resource('product-categories', ProductCategoryController::class)->middleware('permission:karung.manage_categories');
+Route::resource('product-types', ProductTypeController::class)->middleware('permission:karung.manage_types');
+Route::resource('suppliers', SupplierController::class)->middleware('permission:karung.manage_suppliers');
+Route::resource('customers', CustomerController::class)->middleware('permission:karung.manage_customers');
+Route::resource('products', ProductController::class)->middleware('permission:karung.manage_products');
+
+// --- Rute Transaksi ---
+// Menggunakan 'permission:A|B' berarti pengguna harus punya izin A ATAU B
+Route::resource('purchases', PurchaseTransactionController::class)
+    ->except(['edit', 'update', 'destroy']) // Sesuai kesepakatan V1
+    ->middleware(['permission:karung.view_purchases|karung.create_purchases']);
+
+// Rute khusus untuk membatalkan transaksi pembelian
+Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])
+    ->name('purchases.cancel')
+    ->middleware('permission:karung.cancel_purchases'); // Pastikan izin ini sesuai
+
+Route::resource('sales', SalesTransactionController::class)
+    ->except(['edit', 'update', 'destroy']) // Sesuai kesepakatan V1
+    ->middleware(['permission:karung.view_sales|karung.create_sales']);
+
+// Rute khusus untuk membatalkan transaksi penjualan
+Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])
+    ->name('sales.cancel')
+    ->middleware('permission:karung.cancel_sales'); // Pastikan izin ini sesuai
+
+// --- Rute Laporan ---
+Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('reports.')->group(function() {
+    Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
+    Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
+    Route::get('/stock', [ReportController::class, 'stockReport'])->name('stock');
+    Route::get('/profit-loss', [ReportController::class, 'profitAndLoss'])->name('profit_and_loss');
 });
-
-// Grup untuk transaksi pembelian (anggap butuh izin 'manage_products' juga)
-//Route::resource('purchases', PurchaseTransactionController::class); // v.normal
-//Route::resource('sales', SalesTransactionController::class); // <-- v.normal
-//Route::resource('purchases', PurchaseTransactionController::class)->except(['edit', 'update', 'destroy']); // <-- v.1 (disable delete and edit)
-//Route::resource('sales', SalesTransactionController::class)->except(['edit', 'update', 'destroy']); // <-- v.1 (disable delete and edit)
-//Route::resource('purchases', PurchaseTransactionController::class)->except(['edit', 'update', 'destroy'])->middleware(['permission:karung.manage_products']); // <-- v.1 (disable delete and edit) & after fixing bug
-//Route::resource('sales', SalesTransactionController::class)->except(['edit', 'update', 'destroy'])->middleware(['permission:karung.create_sales|karung.manage_products']); // <-- v.1 (disable delete and edit) & after fixing bug
-Route::resource('purchases', PurchaseTransactionController::class)->middleware(['permission:karung.manage_products']); // after fixing bug
-Route::resource('sales', SalesTransactionController::class)->middleware(['permission:karung.create_sales|karung.manage_products']); // after fixing bug
-
-// Grup untuk laporan
-Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales')->middleware(['permission:karung.view_reports']); // after fixing bug
-Route::get('/reports/purchases', [ReportController::class, 'purchases'])->name('reports.purchases')->middleware(['permission:karung.view_reports']); // <-- TAMBAHKAN BARIS INI
-Route::get('/reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock')->middleware(['permission:karung.view_reports']);
-Route::get('/reports/profit-loss', [ReportController::class, 'profitAndLoss'])->name('reports.profit_and_loss')->middleware(['permission:karung.view_reports']); // <-- TAMBAHKAN BARIS INI
-
-// --- TAMBAHKAN GRUP RUTE UNTUK TMT ADMIN DI SINI ---
-Route::middleware(['auth', 'verified', 'role:Super Admin TMT'])->prefix('tmt-admin')->name('tmt.admin.')->group(function () {
-    // Rute untuk Manajemen Pengguna
-    Route::resource('users', UserController::class);
-
-    // Nanti rute untuk manajemen Peran, Izin, dan Pengaturan TMT bisa diletakkan di sini juga
-});
-
-// Anda bisa menambahkan resource route lain di bawah ini nanti untuk Produk, Supplier, dll.

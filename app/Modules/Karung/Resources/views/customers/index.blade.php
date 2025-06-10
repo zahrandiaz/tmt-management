@@ -7,15 +7,23 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"> {{-- Ubah warna header jika mau --}}
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Daftar Pelanggan</h5>
-                    <a href="{{ route('karung.customers.create') }}" class="btn btn-light btn-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-plus-fill" viewBox="0 0 16 16">
-                            <path d="M1 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
-                            <path fill-rule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5V7h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V8h-1.5a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5"/>
-                        </svg>
-                        Tambah Pelanggan Baru
-                    </a>
+                    <div>
+                        {{-- TOMBOL KEMBALI BARU --}}
+                        <a href="{{ route('karung.dashboard') }}" class="btn btn-secondary btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">
+                                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+                            </svg>
+                            Kembali
+                        </a>
+                        <a href="{{ route('karung.customers.create') }}" class="btn btn-light btn-sm"> {{-- Saya ubah dari 'success' ke 'light' agar kontras dengan header gelap --}}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
+                            </svg>
+                            Tambah Pelanggan Baru
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     @if (session('success'))

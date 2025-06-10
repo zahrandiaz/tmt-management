@@ -1,4 +1,5 @@
 <?php
+// File: app/Modules/Karung/Http/Controllers/PurchaseTransactionController.php
 
 namespace App\Modules\Karung\Http\Controllers;
 
@@ -17,17 +18,17 @@ class PurchaseTransactionController extends Controller
      */
     public function index(Request $request)
     {
-        // TODO: Filter berdasarkan business_unit_id yang aktif.
-        // $currentBusinessUnitId = 1;
+        // 1. Ambil status dari URL, jika tidak ada, defaultnya adalah 'Completed'
+        $status = $request->query('status', 'Completed');
 
-        // Mulai query dengan eager loading
-        // DIUBAH: Kita ganti 'user' menjadi 'details.product' untuk mengambil nama produk
-        $query = PurchaseTransaction::with(['supplier', 'details.product']);
+        // TODO: Filter berdasarkan business_unit_id yang aktif.
+        $query = PurchaseTransaction::with(['supplier', 'details.product'])
+                                    // 2. Filter berdasarkan status yang dipilih
+                                    ->where('status', $status);
 
         // Cek apakah ada input pencarian
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
-            // Tambahkan kondisi where untuk memfilter berdasarkan No. Referensi ATAU Nama Supplier (dari relasi)
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('purchase_reference_no', 'like', '%' . $searchTerm . '%')
                   ->orWhereHas('supplier', function ($supplierQuery) use ($searchTerm) {
@@ -39,23 +40,23 @@ class PurchaseTransactionController extends Controller
         // Lanjutkan query dengan urutan dan paginasi
         $purchases = $query->latest('transaction_date')->paginate(15);
 
-        // Mengirim data $purchases ke view
-        return view('karung::purchases.index', compact('purchases'));
+        // 3. Kirim variabel $status ke view agar view tahu tab mana yang aktif
+        return view('karung::purchases.index', compact('purchases', 'status'));
     }
 
+    /**
+     * Show the form for creating a new resource.
+     */
     public function create()
     {
-        // TODO: Nantinya, semua data ini (suppliers, products)
-        // HARUS difilter berdasarkan 'business_unit_id' yang aktif.
-        // Untuk sekarang, kita ambil semua dulu untuk tes.
-        // $currentBusinessUnitId = 1; // Contoh hardcode
-
-        $suppliers = Supplier::orderBy('name', 'asc')->get(); // Ambil semua supplier, urutkan berdasarkan nama
-        $products = Product::where('is_active', true)->orderBy('name', 'asc')->get(); // Ambil semua produk yang aktif, urutkan berdasarkan nama
-
+        $suppliers = Supplier::orderBy('name', 'asc')->get();
+        $products = Product::where('is_active', true)->orderBy('name', 'asc')->get();
         return view('karung::purchases.create', compact('suppliers', 'products'));
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
         // Aturan validasi
@@ -65,7 +66,7 @@ class PurchaseTransactionController extends Controller
             'purchase_reference_no' => ['nullable', 'string', 'max:255'],
             'notes'                 => ['nullable', 'string'],
             'attachment_path'       => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
-            'details'               => ['required', 'array', 'min:1'], // Pastikan ada minimal 1 detail produk
+            'details'               => ['required', 'array', 'min:1'],
             'details.*.product_id'  => ['required', 'integer', 'exists:karung_products,id'],
             'details.*.quantity'    => ['required', 'integer', 'min:1'],
             'details.*.purchase_price_at_transaction' => ['required', 'numeric', 'min:0'],
@@ -75,14 +76,24 @@ class PurchaseTransactionController extends Controller
             // Memulai Database Transaction
             DB::beginTransaction();
 
-            // 1. Siapkan dan Simpan data Transaksi Induk (tanpa total_amount dulu)
+            // --- BAGIAN YANG DIPERBARUI DIMULAI DI SINI ---
+            $supplierId = $validatedData['supplier_id'];
+
+            // Jika tidak ada supplier yang dipilih, cari ID "Pembelian Umum"
+            if (is_null($supplierId)) {
+                $defaultSupplier = Supplier::where('name', 'Pembelian Umum')->first();
+                $supplierId = $defaultSupplier?->id; // Gunakan ID-nya jika ditemukan
+            }
+            // --- AKHIR BAGIAN YANG DIPERBARUI ---
+
+            // 1. Siapkan dan Simpan data Transaksi Induk
             $purchaseData = [
                 'business_unit_id'      => 1, // TODO: Harus dinamis
-                'supplier_id'           => $validatedData['supplier_id'],
+                'supplier_id'           => $supplierId, // Menggunakan variabel $supplierId yang sudah diproses
                 'transaction_date'      => $validatedData['transaction_date'],
                 'purchase_reference_no' => $validatedData['purchase_reference_no'],
                 'notes'                 => $validatedData['notes'],
-                'user_id'               => auth()->id(), // ID pengguna yang sedang login
+                'user_id'               => auth()->id(),
             ];
 
             // Handle upload file jika ada
@@ -105,9 +116,6 @@ class PurchaseTransactionController extends Controller
                 ]);
 
                 $totalAmount += $subTotal;
-
-                // PERJANJIAN: Untuk V1, kita TIDAK update stok produk di master data secara otomatis.
-                // Jika nanti fitur stok otomatis diaktifkan, kodenya akan ada di sini.
             }
 
             // 3. Update total_amount di Transaksi Induk
@@ -121,26 +129,39 @@ class PurchaseTransactionController extends Controller
                              ->with('success', 'Transaksi pembelian baru berhasil disimpan!');
 
         } catch (\Exception $e) {
-            // Jika terjadi error, batalkan semua query yang sudah dijalankan
+            // Jika terjadi error, batalkan semua query
             DB::rollBack();
 
-            // Tampilkan pesan error
             return redirect()->back()
                              ->with('error', 'Terjadi kesalahan saat menyimpan transaksi pembelian: ' . $e->getMessage())
                              ->withInput();
         }
     }
 
+    /**
+     * Display the specified resource.
+     */
     public function show(PurchaseTransaction $purchase)
     {
-        // TODO: Nanti kita perlu menambahkan pengecekan otorisasi,
-        // memastikan pengguna hanya bisa melihat transaksi dari business_unit_id mereka.
-
-        // Eager load relasi yang dibutuhkan untuk halaman detail
         $purchase->load(['supplier', 'user', 'details.product']);
-
         return view('karung::purchases.show', compact('purchase'));
     }
 
-    // ... (method CRUD lainnya: edit, update, destroy) ...
+    /**
+     * Cancel the specified transaction.
+     */
+    public function cancel(PurchaseTransaction $purchase)
+    {
+        // Pengecekan agar transaksi yang sudah dibatalkan tidak bisa dibatalkan lagi.
+        if ($purchase->status == 'Cancelled') {
+            return redirect()->route('karung.purchases.index')
+                             ->with('error', 'Transaksi ini sudah pernah dibatalkan sebelumnya.');
+        }
+
+        $purchase->status = 'Cancelled';
+        $purchase->save();
+        
+        return redirect()->route('karung.purchases.index')
+                         ->with('success', "Transaksi pembelian dengan referensi '{$purchase->purchase_reference_no}' berhasil dibatalkan.");
+    }
 }

@@ -7,15 +7,23 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Daftar Kategori Produk</h5>
-                    {{-- Tombol Tambah Kategori Baru - Rute akan kita buat nanti --}}
-                    <a href="{{ route('karung.product-categories.create') }}" class="btn btn-light btn-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
-                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
-                        </svg>
-                        Tambah Kategori Baru
-                    </a>
+                    <div>
+                        {{-- TOMBOL KEMBALI BARU --}}
+                        <a href="{{ route('karung.dashboard') }}" class="btn btn-secondary btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">
+                                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+                            </svg>
+                            Kembali
+                        </a>
+                        <a href="{{ route('karung.product-categories.create') }}" class="btn btn-light btn-sm"> {{-- Saya ubah dari 'success' ke 'light' agar kontras dengan header gelap --}}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
+                            </svg>
+                            Tambah Kategori Baru
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     {{-- Notifikasi Sukses (jika ada) --}}

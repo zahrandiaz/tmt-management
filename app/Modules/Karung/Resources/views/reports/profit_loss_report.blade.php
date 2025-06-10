@@ -7,8 +7,14 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-dark text-white">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Laporan Laba Rugi Sederhana</h5>
+                    <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">
+                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+                        </svg>
+                        Kembali ke Dashboard
+                    </a>
                 </div>
                 <div class="card-body">
                     {{-- Form Filter Tanggal --}}
