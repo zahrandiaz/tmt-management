@@ -1,8 +1,8 @@
-@extends('layouts.tmt_app')
+@extends('karung::layouts.karung_app')
 
 @section('title', 'Laporan Laba Rugi Sederhana - Modul Toko Karung')
 
-@section('content')
+@section('module-content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">

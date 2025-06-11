@@ -1,8 +1,8 @@
-@extends('layouts.tmt_app')
+@extends('karung::layouts.karung_app')
 
 @section('title', 'Catat Transaksi Pembelian Baru - Modul Toko Karung')
 
-@section('content')
+@section('module-content')
 <div class="container-fluid">
     {{-- Kita bungkus semua dalam satu komponen Alpine.js --}}
     <div x-data="purchaseForm()">

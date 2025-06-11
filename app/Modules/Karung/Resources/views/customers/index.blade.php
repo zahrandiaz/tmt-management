@@ -1,8 +1,8 @@
-@extends('layouts.tmt_app') {{-- Menggunakan layout utama TMT --}}
+@extends('karung::layouts.karung_app') {{-- Menggunakan layout utama TMT --}}
 
 @section('title', 'Daftar Pelanggan - Modul Toko Karung')
 
-@section('content')
+@section('module-content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">

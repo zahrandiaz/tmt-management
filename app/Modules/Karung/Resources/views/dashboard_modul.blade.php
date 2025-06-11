@@ -1,8 +1,8 @@
-@extends('layouts.tmt_app')
+@extends('karung::layouts.karung_app')
 
 @section('title', 'Dashboard Modul Toko Karung')
 
-@section('content')
+@section('module-content')
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-10">
