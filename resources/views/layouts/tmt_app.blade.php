@@ -100,6 +100,9 @@
                             <li class="nav-item"> {{-- <-- TAMBAHKAN BLOK LI INI --}}
                                 <a class="nav-link" href="{{ route('tmt.admin.roles.index') }}">Manajemen Peran</a>
                             </li>
+                            <li class="nav-item"> {{-- <-- TAMBAHKAN BLOK LI INI --}}
+                                <a class="nav-link" href="{{ route('tmt.admin.settings.index') }}">Pengaturan</a>
+                            </li>
                             @endrole
                             {{-- === BLOK KODE BARU SELESAI DI SINI === --}}
 

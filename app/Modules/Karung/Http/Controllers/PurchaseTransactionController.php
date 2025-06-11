@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\Supplier;
 use App\Modules\Karung\Models\Product;
+use App\Modules\Karung\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
@@ -59,7 +60,7 @@ class PurchaseTransactionController extends Controller
      */
     public function store(Request $request)
     {
-        // Aturan validasi
+        // ... (aturan validasi Anda tetap sama) ...
         $validatedData = $request->validate([
             'transaction_date'      => ['required', 'date'],
             'supplier_id'           => ['nullable', 'integer', 'exists:karung_suppliers,id'],
@@ -73,37 +74,36 @@ class PurchaseTransactionController extends Controller
         ]);
 
         try {
-            // Memulai Database Transaction
             DB::beginTransaction();
 
-            // --- BAGIAN YANG DIPERBARUI DIMULAI DI SINI ---
-            $supplierId = $validatedData['supplier_id'];
+            $currentBusinessUnitId = 1; // TODO: Harus dinamis
 
-            // Jika tidak ada supplier yang dipilih, cari ID "Pembelian Umum"
+            // Ambil pengaturan stok otomatis
+            $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
+                                              ->where('setting_key', 'automatic_stock_management')
+                                              ->first()->setting_value == 'true';
+
+            $supplierId = $validatedData['supplier_id'];
             if (is_null($supplierId)) {
                 $defaultSupplier = Supplier::where('name', 'Pembelian Umum')->first();
-                $supplierId = $defaultSupplier?->id; // Gunakan ID-nya jika ditemukan
+                $supplierId = $defaultSupplier?->id;
             }
-            // --- AKHIR BAGIAN YANG DIPERBARUI ---
 
-            // 1. Siapkan dan Simpan data Transaksi Induk
             $purchaseData = [
-                'business_unit_id'      => 1, // TODO: Harus dinamis
-                'supplier_id'           => $supplierId, // Menggunakan variabel $supplierId yang sudah diproses
+                'business_unit_id'      => $currentBusinessUnitId,
+                'supplier_id'           => $supplierId,
                 'transaction_date'      => $validatedData['transaction_date'],
                 'purchase_reference_no' => $validatedData['purchase_reference_no'],
                 'notes'                 => $validatedData['notes'],
                 'user_id'               => auth()->id(),
             ];
 
-            // Handle upload file jika ada
             if ($request->hasFile('attachment_path')) {
                 $purchaseData['attachment_path'] = $request->file('attachment_path')->store('purchase_attachments', 'public');
             }
 
             $purchase = PurchaseTransaction::create($purchaseData);
 
-            // 2. Loop dan Simpan data Detail Transaksi
             $totalAmount = 0;
 
             foreach ($validatedData['details'] as $detail) {
@@ -116,20 +116,27 @@ class PurchaseTransactionController extends Controller
                 ]);
 
                 $totalAmount += $subTotal;
+
+                // --- LOGIKA STOK OTOMATIS DIMULAI DI SINI ---
+                if ($isStockManagementActive) {
+                    $product = Product::find($detail['product_id']);
+                    if ($product) {
+                        // Menambah stok produk
+                        $product->increment('stock', $detail['quantity']);
+                    }
+                }
+                // --- LOGIKA STOK OTOMATIS SELESAI ---
             }
 
-            // 3. Update total_amount di Transaksi Induk
             $purchase->total_amount = $totalAmount;
             $purchase->save();
-
-            // Jika semua berhasil, commit transaksi
+            
             DB::commit();
 
             return redirect()->route('karung.purchases.index')
                              ->with('success', 'Transaksi pembelian baru berhasil disimpan!');
 
         } catch (\Exception $e) {
-            // Jika terjadi error, batalkan semua query
             DB::rollBack();
 
             return redirect()->back()
@@ -152,16 +159,49 @@ class PurchaseTransactionController extends Controller
      */
     public function cancel(PurchaseTransaction $purchase)
     {
-        // Pengecekan agar transaksi yang sudah dibatalkan tidak bisa dibatalkan lagi.
+        // TODO: Tambahkan pengecekan otorisasi lebih lanjut.
+        
         if ($purchase->status == 'Cancelled') {
             return redirect()->route('karung.purchases.index')
                              ->with('error', 'Transaksi ini sudah pernah dibatalkan sebelumnya.');
         }
 
-        $purchase->status = 'Cancelled';
-        $purchase->save();
-        
-        return redirect()->route('karung.purchases.index')
-                         ->with('success', "Transaksi pembelian dengan referensi '{$purchase->purchase_reference_no}' berhasil dibatalkan.");
+        try {
+            DB::beginTransaction();
+
+            $currentBusinessUnitId = 1; // TODO: Harus dinamis
+
+            // Ambil pengaturan stok otomatis
+            $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
+                                              ->where('setting_key', 'automatic_stock_management')
+                                              ->first()->setting_value == 'true';
+
+            // --- LOGIKA PENGEMBALIAN STOK DIMULAI DI SINI ---
+            if ($isStockManagementActive) {
+                // Loop melalui setiap detail transaksi yang akan dibatalkan
+                foreach ($purchase->details as $detail) {
+                    $product = $detail->product; // Mengambil produk dari relasi
+                    if ($product) {
+                        // Mengurangi kembali stok yang tadinya ditambahkan
+                        $product->decrement('stock', $detail->quantity);
+                    }
+                }
+            }
+            // --- LOGIKA PENGEMBALIAN STOK SELESAI ---
+
+            // Ubah status menjadi 'Cancelled'
+            $purchase->status = 'Cancelled';
+            $purchase->save();
+
+            DB::commit();
+
+            return redirect()->route('karung.purchases.index')
+                             ->with('success', "Transaksi pembelian dengan referensi '{$purchase->purchase_reference_no}' berhasil dibatalkan.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('karung.purchases.index')
+                             ->with('error', 'Terjadi kesalahan saat membatalkan transaksi: ' . $e->getMessage());
+        }
     }
 }
