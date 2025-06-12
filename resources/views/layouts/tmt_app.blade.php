@@ -1,3 +1,7 @@
+{{-- ====================================================================== --}}
+{{-- File: resources/views/layouts/tmt_app.blade.php (Layout Utama) --}}
+{{-- Ganti seluruh isi file ini dengan kode di bawah. --}}
+{{-- ====================================================================== --}}
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -15,7 +19,8 @@
     <style>
         html, body { height: 100%; }
         #tmt_app { display: flex; flex-direction: column; height: 100%; }
-        main { flex-grow: 1; display: flex; overflow: hidden; }
+        /* PERBAIKAN: Menghapus 'overflow: hidden' dari main */
+        main { flex-grow: 1; display: flex; } 
         .sidebar-icon { fill: currentColor; }
         @media print {
             body > #tmt_app > nav, .offcanvas, footer, .no-print { display: none !important; }
@@ -86,7 +91,6 @@
             @yield('content')
         </main>
     </div>
-    {{-- PERBAIKAN TYPO 'xintegrity' MENJADI 'integrity' --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     @stack('footer-scripts')
 </body>

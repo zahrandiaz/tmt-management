@@ -14,6 +14,7 @@ class PurchaseTransaction extends Model
 
     protected $fillable = [
         'business_unit_id',
+        'purchase_code',
         'supplier_id',
         'transaction_date',
         'purchase_reference_no',
@@ -21,6 +22,7 @@ class PurchaseTransaction extends Model
         'notes',
         'attachment_path',
         'user_id',
+        'status',
     ];
 
     /**
@@ -29,7 +31,7 @@ class PurchaseTransaction extends Model
      * @var array
      */
     protected $casts = [
-        'transaction_date' => 'date',
+        'transaction_date' => 'datetime',
     ];
 
     /**

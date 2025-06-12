@@ -19,7 +19,7 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control @error('transaction_date') is-invalid @enderror" id="transaction_date" name="transaction_date" value="{{ old('transaction_date', date('Y-m-d')) }}" required>
+                                    <input type="datetime-local" class="form-control @error('transaction_date') is-invalid @enderror" id="transaction_date" name="transaction_date" value="{{ old('transaction_date', now()->format('Y-m-d\TH:i')) }}" required>
                                     @error('transaction_date')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
