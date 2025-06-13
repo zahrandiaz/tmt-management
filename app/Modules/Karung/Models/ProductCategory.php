@@ -4,10 +4,14 @@ namespace App\Modules\Karung\Models; // PASTIKAN NAMESPACE INI BENAR
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class ProductCategory extends Model
 {
     use HasFactory;
+    // [BARU] Tambahkan trait ini
+    use LogsActivity;
 
     /**
      * Nama tabel yang terhubung dengan model ini.
@@ -37,4 +41,12 @@ class ProductCategory extends Model
     //    // Jika ada model BusinessUnit di TMT Core
     //    // return $this->belongsTo(App\Models\BusinessUnit::class, 'business_unit_id');
     // }
+    // [BARU] Tambahkan method ini untuk kustomisasi log produk
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'purchase_price', 'selling_price', 'stock', 'is_active']) // Kolom penting untuk dilacak
+            ->logOnlyDirty()
+            ->setDescriptionForEvent(fn(string $eventName) => "Produk ini telah di-{$eventName}");
+    }
 }

@@ -1,6 +1,5 @@
 {{-- ====================================================================== --}}
-{{-- File: resources/views/layouts/tmt_app.blade.php (Layout Utama) --}}
-{{-- Ganti seluruh isi file ini dengan kode di bawah. --}}
+{{-- File: resources/views/layouts/tmt_app.blade.php (Layout Utama - VERSI FINAL) --}}
 {{-- ====================================================================== --}}
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -9,35 +8,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Laravel') }} - @yield('title', 'Dashboard')</title>
-    <!-- Fonts -->
+
     <link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-    <!-- Bootstrap CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
-    {{-- CSS Khusus --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    {{-- CSS untuk Tom Select --}}
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+    {{-- CSS Khusus & Print --}}
     <style>
         html, body { height: 100%; }
         #tmt_app { display: flex; flex-direction: column; height: 100%; }
-        /* PERBAIKAN: Menghapus 'overflow: hidden' dari main */
         main { flex-grow: 1; display: flex; } 
         .sidebar-icon { fill: currentColor; }
         @media print {
             body > #tmt_app > nav, .offcanvas, footer, .no-print { display: none !important; }
             body, main, .content-wrapper, .card, .card-body { background-color: white !important; padding: 0 !important; margin: 0 !important; border: none !important; box-shadow: none !important; }
-            .container-fluid, .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
             .card-header { text-align: center !important; background-color: transparent !important; color: black !important; border-bottom: 1px solid #ddd !important; padding-bottom: 10px !important; }
             .table { font-size: 11px; color: black !important; }
             .table-dark th { background-color: #eee !important; color: black !important; border-color: #ddd !important; }
         }
     </style>
+    
     @stack('head-scripts')
 </head>
 <body>
     <div id="tmt_app">
         <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
             <div class="container-fluid">
-                {{-- Tombol Hamburger untuk memunculkan sidebar di mobile --}}
                 @if(request()->is('tmt/karung/*') || request()->is('tmt-admin/*'))
                 <button class="btn btn-dark d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#moduleSidebar" aria-controls="moduleSidebar">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/></svg>
@@ -65,6 +65,12 @@
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('tmt.admin.settings.index') }}">Pengaturan</a>
                             </li>
+                            {{-- [BARU] Tambahkan blok di bawah ini --}}
+                            @can('view system logs')
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('tmt.admin.activity_log.index') }}">Log Aktivitas</a>
+                            </li>
+                            @endcan
                             @endrole
                         @endauth
                     </ul>
@@ -91,7 +97,15 @@
             @yield('content')
         </main>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+    {{-- [PERBAIKAN] Memuat Alpine.js (Harus ada SEBELUM Tom Select jika ada dependensi) --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {{-- JS untuk Tom Select --}}
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    
     @stack('footer-scripts')
 </body>
 </html>

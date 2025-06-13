@@ -70,6 +70,14 @@
                                         <td>{{ $customer->phone_number ?: '-' }}</td>
                                         <td>{{ $customer->email ?: '-' }}</td>
                                         <td class="text-center">
+                                            {{-- Tombol Riwayat BARU --}}
+                                            <a href="{{ route('karung.customers.history', $customer->id) }}" class="btn btn-info btn-sm text-white" title="Lihat Riwayat Transaksi">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
+                                                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342l-.36.933zm1.37.71a7.01 7.01 0 0 0-.439-.27l.493-.87a8.025 8.025 0 0 1 .979.654l-.615.789a6.996 6.996 0 0 0-.418-.302zm1.834 1.798a6.99 6.99 0 0 0-.653-.796l.724-.69c.27.285.52.59.747.91l-.818.576zm.744 1.352a7.08 7.08 0 0 0-.214-.468l.893-.45a7.986 7.986 0 0 1 .45 1.088l-.95.313a7.023 7.023 0 0 0-.179-.483zM12 8.5a.5.5 0 0 1 .5-.5h.5a.5.5 0 0 1 0 1h-.5a.5.5 0 0 1-.5-.5m-.002-4.205a7.002 7.002 0 0 0-.299-.985l-.976.219a6.996 6.996 0 0 0 .27.44l.933-.364zM8.5 7.999a.5.5 0 0 1 .5-.5h2.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+                                                    <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+                                                    <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m15 0a7 7 0 1 0-14 0 7 7 0 0 0 14 0"/>
+                                                </svg>
+                                            </a>
                                             <a href="{{ route('karung.customers.edit', $customer->id) }}" class="btn btn-warning btn-sm" title="Edit">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
                                                     <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>

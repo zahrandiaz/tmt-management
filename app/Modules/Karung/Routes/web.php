@@ -31,7 +31,13 @@ Route::get('/dashboard-modul', [DashboardController::class, 'index'])->name('das
 Route::resource('product-categories', ProductCategoryController::class)->middleware('permission:karung.manage_categories');
 Route::resource('product-types', ProductTypeController::class)->middleware('permission:karung.manage_types');
 Route::resource('suppliers', SupplierController::class)->middleware('permission:karung.manage_suppliers');
+// [BARU] Tambahkan rute ini untuk halaman riwayat supplier
+Route::get('suppliers/{supplier}/history', [SupplierController::class, 'history'])->name('suppliers.history')->middleware('permission:karung.view_purchases');
+
 Route::resource('customers', CustomerController::class)->middleware('permission:karung.manage_customers');
+// [BARU] Tambahkan rute ini untuk halaman riwayat pelanggan
+Route::get('customers/{customer}/history', [CustomerController::class, 'history'])->name('customers.history')->middleware('permission:karung.view_sales');
+
 Route::resource('products', ProductController::class)->middleware('permission:karung.manage_products');
 
 // --- Rute Transaksi ---

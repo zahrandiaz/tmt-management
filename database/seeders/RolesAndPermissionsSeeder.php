@@ -20,10 +20,10 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Daftar permissions yang akan dibuat
         $permissions = [
-            // ... (permissions TMT Core yang sudah ada) ...
             'manage tmt settings',
             'manage users',
             'view tmt dashboard',
+            'view system logs', // Permission baru kita
 
             // Permissions untuk Modul Toko Karung
             'karung.access_module',
@@ -35,11 +35,11 @@ class RolesAndPermissionsSeeder extends Seeder
             
             'karung.view_purchases',
             'karung.create_purchases',
-            'karung.cancel_purchases', // <-- IZIN BARU UNTUK PEMBATALAN PEMBELIAN
+            'karung.cancel_purchases',
 
             'karung.view_sales',
             'karung.create_sales',
-            'karung.cancel_sales',     // <-- IZIN BARU UNTUK PEMBATALAN PENJUALAN
+            'karung.cancel_sales',
 
             'karung.view_reports',
         ];
@@ -53,7 +53,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Buat Roles jika belum ada
         $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin TMT', 'guard_name' => 'web']);
         $adminKarungRole = Role::firstOrCreate(['name' => 'Admin Modul Karung', 'guard_name' => 'web']);
-        $staffKarungRole = Role::firstOrCreate(['name' => 'Staff Modul Karung', 'guard_name' => 'web']); // Ganti nama jika Anda sudah ubah ke "Kasir Senior"
+        $staffKarungRole = Role::firstOrCreate(['name' => 'Staff Modul Karung', 'guard_name' => 'web']);
         $this->command->info('Roles telah dibuat/diverifikasi.');
 
         // Berikan semua permissions ke Super Admin TMT
@@ -71,10 +71,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.manage_customers',
             'karung.view_purchases',
             'karung.create_purchases',
-            'karung.cancel_purchases', // <-- BERIKAN IZIN BARU
+            'karung.cancel_purchases',
             'karung.view_sales',
             'karung.create_sales',
-            'karung.cancel_sales',   // <-- BERIKAN IZIN BARU
+            'karung.cancel_sales',
             'karung.view_reports',
         ]);
         $this->command->info("Permissions untuk 'Admin Modul Karung' telah ditetapkan.");
@@ -86,9 +86,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.view_sales', // Mungkin kasir juga butuh lihat riwayat penjualan
             'karung.create_sales',
         ]);
+        // [PERBAIKAN] Mengubah tanda titik menjadi tanda panah
         $this->command->info("Permissions untuk 'Staff Modul Karung' telah ditetapkan.");
         
         // ... (sisa kode untuk assign role ke Super Admin) ...
     }
 }
-

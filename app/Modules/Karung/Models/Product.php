@@ -1,13 +1,20 @@
 <?php
 
-namespace App\Modules\Karung\Models; // PASTIKAN NAMESPACE INI BENAR
+namespace App\Modules\Karung\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+// [BARU] Tambahkan use statement ini
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+
 class Product extends Model
 {
     use HasFactory;
+
+    // [BARU] Tambahkan trait ini
+    use LogsActivity;
 
     protected $table = 'karung_products';
 
@@ -27,23 +34,28 @@ class Product extends Model
         'is_active',
     ];
 
-    // Definisikan relasi ke Kategori Produk
+    // ... (Relasi yang sudah ada biarkan saja) ...
     public function category()
     {
         return $this->belongsTo(ProductCategory::class, 'product_category_id');
     }
 
-    // Definisikan relasi ke Jenis Produk
     public function type()
     {
         return $this->belongsTo(ProductType::class, 'product_type_id');
     }
 
-    // Definisikan relasi ke Supplier (untuk supplier langganan)
     public function defaultSupplier()
     {
         return $this->belongsTo(Supplier::class, 'default_supplier_id');
     }
 
-    // Nanti bisa ada relasi lain seperti ke detail penjualan atau pembelian
+    // [BARU] Tambahkan method ini untuk kustomisasi log produk
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'purchase_price', 'selling_price', 'stock', 'is_active']) // Kolom penting untuk dilacak
+            ->logOnlyDirty()
+            ->setDescriptionForEvent(fn(string $eventName) => "Produk ini telah di-{$eventName}");
+    }
 }

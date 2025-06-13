@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Tmt\UserController;
 use App\Http\Controllers\Tmt\RoleController;
 use App\Http\Controllers\Tmt\SettingController; // <-- TAMBAHKAN INI
+use App\Http\Controllers\Tmt\ActivityLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,10 @@ Route::middleware(['auth', 'verified', 'role:Super Admin TMT'])->prefix('tmt-adm
     // --- Rute untuk Pengaturan ---
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
+
+    // [BARU] Rute untuk Log Aktivitas
+    Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity_log.index')->middleware('permission:view system logs');
+
 
 });
 

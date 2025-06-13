@@ -98,6 +98,21 @@ class SupplierController extends Controller
                          ->with('success', 'Supplier baru berhasil ditambahkan!');
     }
 
+    /**
+     * [BARU] Menampilkan riwayat transaksi untuk satu supplier.
+     */
+    public function history(Supplier $supplier)
+    {
+        // Ambil transaksi pembelian milik supplier ini
+        $purchases = $supplier->purchaseTransactions()
+                            ->where('status', 'Completed')
+                            ->latest()
+                            ->paginate(15);
+
+        // Kirim data supplier dan transaksinya ke view baru
+        return view('karung::suppliers.history', compact('supplier', 'purchases'));
+    }
+
     public function edit(Supplier $supplier) // Laravel otomatis mengambil data supplier
     {
         // TODO: Nanti kita perlu menambahkan pengecekan apakah $supplier ini

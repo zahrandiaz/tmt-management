@@ -81,6 +81,22 @@ class CustomerController extends Controller
                          ->with('success', 'Pelanggan baru berhasil ditambahkan!');
     }
 
+    /**
+     * [BARU] Menampilkan riwayat transaksi untuk satu pelanggan.
+     */
+    public function history(Customer $customer)
+    {
+        // Ambil transaksi penjualan milik pelanggan ini
+        // Pastikan hanya yang berstatus 'Completed'
+        $sales = $customer->salesTransactions()
+                          ->where('status', 'Completed')
+                          ->latest()
+                          ->paginate(15);
+
+        // Kirim data pelanggan dan transaksinya ke view baru
+        return view('karung::customers.history', compact('customer', 'sales'));
+    }
+
     public function edit(Customer $customer) // Laravel otomatis mengambil data pelanggan
     {
         // TODO: Nanti kita perlu menambahkan pengecekan apakah $customer ini

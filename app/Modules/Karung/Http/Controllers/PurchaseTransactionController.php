@@ -15,34 +15,25 @@ use Illuminate\Support\Str;
 
 class PurchaseTransactionController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    // ... (method index() dan create() tidak berubah) ...
     public function index(Request $request)
     {
         $status = $request->query('status', 'Completed');
-
-        $query = PurchaseTransaction::with(['supplier', 'details.product'])
-                                    ->where('status', $status);
-
+        $query = PurchaseTransaction::with(['supplier', 'details.product'])->where('status', $status);
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('purchase_reference_no', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('purchase_code', 'like', '%' . $searchTerm . '%')
-                  ->orWhereHas('supplier', function ($supplierQuery) use ($searchTerm) {
-                      $supplierQuery->where('name', 'like', '%' . $searchTerm . '%');
-                  });
+                ->orWhere('purchase_code', 'like', '%' . $searchTerm . '%')
+                ->orWhereHas('supplier', function ($supplierQuery) use ($searchTerm) {
+                    $supplierQuery->where('name', 'like', '%' . $searchTerm . '%');
+                });
             });
         }
-
         $purchases = $query->orderBy('transaction_date', 'desc')->paginate(15);
         return view('karung::purchases.index', compact('purchases', 'status'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $suppliers = Supplier::orderBy('name', 'asc')->get();
@@ -50,9 +41,6 @@ class PurchaseTransactionController extends Controller
         return view('karung::purchases.create', compact('suppliers', 'products'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -69,21 +57,16 @@ class PurchaseTransactionController extends Controller
 
         try {
             DB::beginTransaction();
-
-            $currentBusinessUnitId = 1; // TODO: Harus dinamis
-
+            $currentBusinessUnitId = 1;
             $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
-                                              ->where('setting_key', 'automatic_stock_management')
-                                              ->first()->setting_value == 'true';
-
+                                            ->where('setting_key', 'automatic_stock_management')
+                                            ->first()->setting_value == 'true';
             $supplierId = $validatedData['supplier_id'];
             if (is_null($supplierId)) {
                 $defaultSupplier = Supplier::where('name', 'Pembelian Umum')->first();
                 $supplierId = $defaultSupplier?->id;
             }
-            
             $purchaseCode = 'PB/'.date('Ymd').'/'.strtoupper(Str::random(6));
-
             $purchaseData = [
                 'business_unit_id'      => $currentBusinessUnitId,
                 'purchase_code'         => $purchaseCode,
@@ -93,16 +76,11 @@ class PurchaseTransactionController extends Controller
                 'notes'                 => $validatedData['notes'],
                 'user_id'               => auth()->id(),
             ];
-
             if ($request->hasFile('attachment_path')) {
                 $purchaseData['attachment_path'] = $request->file('attachment_path')->store('purchase_attachments', 'public');
             }
-
             $purchase = PurchaseTransaction::create($purchaseData);
-
-            // === LOGIKA YANG HILANG SEBELUMNYA DIMULAI DI SINI ===
             $totalAmount = 0;
-
             foreach ($validatedData['details'] as $detail) {
                 $subTotal = $detail['quantity'] * $detail['purchase_price_at_transaction'];
                 $purchase->details()->create([
@@ -111,9 +89,7 @@ class PurchaseTransactionController extends Controller
                     'purchase_price_at_transaction' => $detail['purchase_price_at_transaction'],
                     'sub_total' => $subTotal,
                 ]);
-
                 $totalAmount += $subTotal;
-
                 if ($isStockManagementActive) {
                     $product = Product::find($detail['product_id']);
                     if ($product) {
@@ -121,50 +97,41 @@ class PurchaseTransactionController extends Controller
                     }
                 }
             }
-
             $purchase->total_amount = $totalAmount;
             $purchase->save();
-            // === AKHIR DARI LOGIKA YANG HILANG ===
-            
             DB::commit();
 
+            // [BARU] Catat aktivitas setelah transaksi berhasil
+            activity()->log("Membuat transaksi pembelian baru dengan kode #{$purchase->purchase_code}");
+
             return redirect()->route('karung.purchases.index')
-                             ->with('success', 'Transaksi pembelian baru berhasil disimpan!');
+                            ->with('success', 'Transaksi pembelian baru berhasil disimpan!');
 
         } catch (\Exception $e) {
             DB::rollBack();
-
             return redirect()->back()
-                             ->with('error', 'Terjadi kesalahan saat menyimpan transaksi pembelian: ' . $e->getMessage())
-                             ->withInput();
+                            ->with('error', 'Terjadi kesalahan saat menyimpan transaksi pembelian: ' . $e->getMessage())
+                            ->withInput();
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(PurchaseTransaction $purchase)
     {
         $purchase->load(['supplier', 'user', 'details.product']);
         return view('karung::purchases.show', compact('purchase'));
     }
 
-    /**
-     * Cancel the specified transaction.
-     */
     public function cancel(PurchaseTransaction $purchase)
     {
         if ($purchase->status == 'Cancelled') {
             return redirect()->route('karung.purchases.index')->with('error', 'Transaksi ini sudah pernah dibatalkan sebelumnya.');
         }
-
         try {
             DB::beginTransaction();
             $currentBusinessUnitId = 1;
             $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
-                                              ->where('setting_key', 'automatic_stock_management')
-                                              ->first()->setting_value == 'true';
-
+                                            ->where('setting_key', 'automatic_stock_management')
+                                            ->first()->setting_value == 'true';
             if ($isStockManagementActive) {
                 foreach ($purchase->details as $detail) {
                     $product = $detail->product;
@@ -173,12 +140,14 @@ class PurchaseTransactionController extends Controller
                     }
                 }
             }
-
             $purchase->status = 'Cancelled';
             $purchase->save();
             DB::commit();
 
-            return redirect()->route('karung.purchases.index')->with('success', "Transaksi pembelian dengan referensi '{$purchase->purchase_reference_no}' berhasil dibatalkan.");
+            // [BARU] Catat aktivitas pembatalan setelah berhasil
+            activity()->log("Membatalkan transaksi pembelian dengan kode #{$purchase->purchase_code}");
+
+            return redirect()->route('karung.purchases.index')->with('success', "Transaksi pembelian dengan kode '{$purchase->purchase_code}' berhasil dibatalkan.");
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->route('karung.purchases.index')->with('error', 'Terjadi kesalahan saat membatalkan transaksi: ' . $e->getMessage());

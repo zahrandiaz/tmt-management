@@ -5,8 +5,8 @@
 @section('module-content')
 <div class="container-fluid">
     {{-- Kita bungkus semua dalam satu komponen Alpine.js --}}
-    <div x-data="salesForm()">
-        <form action="{{ route('karung.sales.store') }}" method="POST">
+    <div x-data="salesForm(productsData)">
+        <form action="{{ route('karung.sales.store') }}" method="POST" @submit.prevent="submitForm">
             @csrf
             <div class="row">
                 <div class="col-12">
@@ -15,14 +15,11 @@
                             <h5 class="mb-0">Catat Transaksi Penjualan Baru</h5>
                         </div>
                         <div class="card-body">
-                            {{-- Baris 1: Tanggal & Pelanggan --}}
+                            {{-- ... (Bagian atas form tidak berubah, jadi saya persingkat di sini) ... --}}
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
                                     <input type="datetime-local" class="form-control @error('transaction_date') is-invalid @enderror" id="transaction_date" name="transaction_date" value="{{ old('transaction_date', now()->format('Y-m-d\TH:i')) }}" required>
-                                    @error('transaction_date')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
                                 </div>
                                 <div class="col-md-6">
                                     <label for="customer_id" class="form-label">Pelanggan</label>
@@ -34,24 +31,15 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    @error('customer_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
                                 </div>
                             </div>
-
-                            {{-- Baris 2: Catatan --}}
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <label for="notes" class="form-label">Catatan (Opsional)</label>
                                     <textarea class="form-control @error('notes') is-invalid @enderror" id="notes" name="notes" rows="1">{{ old('notes') }}</textarea>
-                                    @error('notes')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
                                 </div>
                             </div>
 
-                            {{-- Bagian Detail Produk Penjualan --}}
                             <h5 class="mb-3">Detail Produk</h5>
                             <div class="table-responsive">
                                 <table class="table table-bordered">
@@ -65,30 +53,23 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {{-- Loop dinamis menggunakan Alpine.js --}}
                                         <template x-for="(item, index) in items" :key="index">
                                             <tr>
                                                 <td>
-                                                    <select :name="'details[' + index + '][product_id]'" x-model="item.product_id" @change="productChanged(index)" class="form-select" required>
-                                                        <option value="">-- Pilih Produk --</option>
-                                                        @foreach ($products as $product)
-                                                            <option value="{{ $product->id }}">{{ $product->name }} (Stok: {{ $product->stock }})</option>
-                                                        @endforeach
-                                                    </select>
+                                                    <input type="hidden" :name="'details[' + index + '][product_id]'" x-model="item.product_id">
+                                                    <input :id="'product-select-' + index" x-init="initTomSelect($el, index)" />
                                                 </td>
                                                 <td>
-                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" class="form-control" placeholder="Jumlah" required min="1">
+                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="item.quantity = Math.max(1, item.quantity)" class="form-control" placeholder="Jumlah" required min="1">
                                                 </td>
                                                 <td>
                                                     <input type="number" :name="'details[' + index + '][selling_price_at_transaction]'" x-model.number="item.price" class="form-control" placeholder="Harga Jual" required min="0">
                                                 </td>
                                                 <td>
-                                                    <input type="text" :value="formatCurrency(item.quantity * item.price)" class="form-control" readonly>
+                                                    <input type="text" :value="formatCurrency(item.quantity * item.price)" class="form-control bg-light" readonly>
                                                 </td>
                                                 <td class="text-center">
-                                                    <button type="button" @click="removeItem(index)" class="btn btn-danger btn-sm">
-                                                        Hapus
-                                                    </button>
+                                                    <button type="button" @click="removeItem(index)" class="btn btn-danger btn-sm">&times;</button>
                                                 </td>
                                             </tr>
                                         </template>
@@ -96,15 +77,14 @@
                                     <tfoot>
                                         <tr>
                                             <td colspan="5">
-                                                <button type="button" @click="addItem()" class="btn btn-success btn-sm">
-                                                    + Tambah Baris Produk
-                                                </button>
+                                                <button type="button" @click="addItem()" class="btn btn-success btn-sm">+ Tambah Baris Produk</button>
                                             </td>
                                         </tr>
                                         <tr>
                                             <th colspan="3" class="text-end">TOTAL PENJUALAN:</th>
                                             <td colspan="2">
-                                                <input type="text" x-model="formatCurrency(total)" class="form-control fw-bold fs-5 text-end" readonly>
+                                                <input type="text" :value="formatCurrency(total)" class="form-control fw-bold fs-5 text-end bg-light" readonly>
+                                                <input type="hidden" name="total_amount" :value="total">
                                             </td>
                                         </tr>
                                     </tfoot>
@@ -113,7 +93,7 @@
 
                             <div class="d-flex justify-content-end mt-4">
                                 <a href="{{ route('karung.sales.index') }}" class="btn btn-outline-secondary me-2">Batal</a>
-                                <button type="submit" class="btn btn-success">Simpan Transaksi Penjualan</button>
+                                <button type="submit" class="btn btn-success" :disabled="items.length === 0 || items.some(item => !item.product_id)">Simpan Transaksi Penjualan</button>
                             </div>
                         </div>
                     </div>
@@ -124,57 +104,78 @@
 </div>
 @endsection
 
-@push('footer-scripts')
-{{-- Memuat Alpine.js dari CDN --}}
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{{-- [PERBAIKAN] Data PHP ke JS dideklarasikan di luar komponen Alpine --}}
+@php
+    $productsJson = $products->map(function($product) {
+        return [
+            'value' => $product->id,
+            'text' => $product->name . ' (Stok: ' . $product->stock . ')',
+            'selling_price' => $product->selling_price,
+        ];
+    });
+@endphp
 <script>
-    function salesForm() {
-        // Kita ubah data produk dari PHP ke format JSON agar bisa dibaca JavaScript
-        const products = @json($products->map(function($product) {
-            return [
-                'id' => $product->id,
-                'selling_price' => $product->selling_price,
-            ];
-        })->keyBy('id'));
+    const productsData = @json($productsJson);
+</script>
 
+@push('footer-scripts')
+<script>
+    function salesForm(products) {
         return {
-            items: [{ product_id: '', quantity: 1, price: 0 }], // Mulai dengan 1 baris kosong
+            items: [{ product_id: '', quantity: 1, price: 0 }],
+            tomSelectInstances: [], 
 
-            productChanged(index) {
-                const selectedProductId = this.items[index].product_id;
-                if (selectedProductId && products[selectedProductId]) {
-                    // Jika produk dipilih, otomatis isi harga jualnya dari data master produk
-                    this.items[index].price = products[selectedProductId].selling_price;
+            initTomSelect(element, index) {
+                const tomSelect = new TomSelect(element, {
+                    options: products,
+                    placeholder: '-- Pilih atau Cari Produk --',
+                    maxItems: 1,
+                    onChange: (value) => {
+                        this.productChanged(index, value);
+                    }
+                });
+                this.tomSelectInstances[index] = tomSelect;
+            },
+
+            productChanged(index, selectedProductId) {
+                this.items[index].product_id = selectedProductId;
+                const selectedProduct = products.find(p => p.value == selectedProductId);
+                if (selectedProduct) {
+                    this.items[index].price = selectedProduct.selling_price;
                 } else {
                     this.items[index].price = 0;
                 }
             },
 
             addItem() {
-                this.items.push({
-                    product_id: '',
-                    quantity: 1,
-                    price: 0
-                });
+                this.items.push({ product_id: '', quantity: 1, price: 0 });
             },
 
             removeItem(index) {
+                if (this.tomSelectInstances[index]) {
+                    this.tomSelectInstances[index].destroy();
+                }
                 this.items.splice(index, 1);
+                this.tomSelectInstances.splice(index, 1);
             },
 
             get total() {
                 return this.items.reduce((sum, item) => {
-                    const quantity = isNaN(item.quantity) ? 0 : item.quantity;
+                    const quantity = isNaN(item.quantity) || item.quantity < 1 ? 0 : item.quantity;
                     const price = isNaN(item.price) ? 0 : item.price;
                     return sum + (quantity * price);
                 }, 0);
             },
-
+            
             formatCurrency(value) {
                 if (isNaN(value)) {
                     return 'Rp 0';
                 }
                 return 'Rp ' + new Intl.NumberFormat('id-ID').format(value);
+            },
+            
+            submitForm(event) {
+                event.target.submit();
             }
         }
     }

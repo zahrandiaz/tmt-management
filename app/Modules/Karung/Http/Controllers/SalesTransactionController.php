@@ -14,40 +14,24 @@ use Illuminate\Http\Request;
 
 class SalesTransactionController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    // ... (method index() dan create() tidak berubah) ...
     public function index(Request $request)
     {
-        // 1. Ambil status dari URL, jika tidak ada, defaultnya adalah 'Completed'
         $status = $request->query('status', 'Completed');
-
-        // TODO: Filter berdasarkan business_unit_id yang aktif.
-        $query = SalesTransaction::with(['customer', 'details.product'])
-                                    // 2. Filter berdasarkan status yang dipilih
-                                    ->where('status', $status);
-
-        // Cek apakah ada input pencarian
+        $query = SalesTransaction::with(['customer', 'details.product'])->where('status', $status);
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('invoice_number', 'like', '%' . $searchTerm . '%')
-                  ->orWhereHas('customer', function ($customerQuery) use ($searchTerm) {
-                      $customerQuery->where('name', 'like', '%' . $searchTerm . '%');
-                  });
+                ->orWhereHas('customer', function ($customerQuery) use ($searchTerm) {
+                    $customerQuery->where('name', 'like', '%' . $searchTerm . '%');
+                });
             });
         }
-
-        // Lanjutkan query dengan urutan dan paginasi
         $sales = $query->latest()->paginate(15);
-
-        // 3. Kirim variabel $status ke view agar view tahu tab mana yang aktif
         return view('karung::sales.index', compact('sales', 'status'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $customers = Customer::orderBy('name', 'asc')->get();
@@ -55,12 +39,8 @@ class SalesTransactionController extends Controller
         return view('karung::sales.create', compact('customers', 'products'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        // ... (aturan validasi Anda tetap sama) ...
         $validatedData = $request->validate([
             'transaction_date'      => ['required', 'date'],
             'customer_id'           => ['nullable', 'integer', 'exists:karung_customers,id'],
@@ -73,13 +53,12 @@ class SalesTransactionController extends Controller
 
         try {
             DB::beginTransaction();
-            
-            $currentBusinessUnitId = 1; // TODO: Harus dinamis
 
-            // Ambil pengaturan stok otomatis
+            $currentBusinessUnitId = 1;
+
             $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
-                                              ->where('setting_key', 'automatic_stock_management')
-                                              ->first()->setting_value == 'true';
+                                            ->where('setting_key', 'automatic_stock_management')
+                                            ->first()->setting_value == 'true';
 
             $customerId = $validatedData['customer_id'];
             if (is_null($customerId)) {
@@ -97,7 +76,6 @@ class SalesTransactionController extends Controller
             ];
 
             $sale = SalesTransaction::create($saleData);
-
             $totalAmount = 0;
 
             foreach ($validatedData['details'] as $detail) {
@@ -108,100 +86,75 @@ class SalesTransactionController extends Controller
                     'selling_price_at_transaction' => $detail['selling_price_at_transaction'],
                     'sub_total' => $subTotal,
                 ]);
-
                 $totalAmount += $subTotal;
-
-                // --- LOGIKA STOK OTOMATIS DIMULAI DI SINI ---
                 if ($isStockManagementActive) {
                     $product = Product::find($detail['product_id']);
                     if ($product) {
-                        // Di sini kita bisa menambahkan validasi, jika stok tidak mencukupi, gagalkan transaksi.
-                        // if ($product->stock < $detail['quantity']) {
-                        //     // Melempar exception akan otomatis memicu DB::rollBack()
-                        //     throw new \Exception("Stok untuk produk '{$product->name}' tidak mencukupi.");
-                        // }
-
-                        // Mengurangi stok produk
                         $product->decrement('stock', $detail['quantity']);
                     }
                 }
-                // --- LOGIKA STOK OTOMATIS SELESAI ---
             }
 
             $sale->total_amount = $totalAmount;
             $sale->save();
-            
+
             DB::commit();
 
+            // [BARU] Catat aktivitas setelah transaksi berhasil
+            activity()->log("Membuat transaksi penjualan baru dengan invoice #{$sale->invoice_number}");
+
             return redirect()->route('karung.sales.index')
-                             ->with('success', 'Transaksi penjualan baru berhasil disimpan!');
+                            ->with('success', 'Transaksi penjualan baru berhasil disimpan!');
 
         } catch (\Exception $e) {
             DB::rollBack();
-
             return redirect()->back()
                             ->with('error', 'Terjadi kesalahan saat menyimpan transaksi penjualan: ' . $e->getMessage())
                             ->withInput();
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(SalesTransaction $sale)
     {
         $sale->load(['customer', 'user', 'details.product']);
         return view('karung::sales.show', compact('sale'));
     }
-    
-    /**
-     * Cancel the specified transaction.
-     */
+
     public function cancel(SalesTransaction $sale)
     {
-        // TODO: Tambahkan pengecekan otorisasi lebih lanjut.
-        
         if ($sale->status == 'Cancelled') {
             return redirect()->route('karung.sales.index')
-                             ->with('error', 'Transaksi ini sudah pernah dibatalkan sebelumnya.');
+                            ->with('error', 'Transaksi ini sudah pernah dibatalkan sebelumnya.');
         }
 
         try {
             DB::beginTransaction();
-
-            $currentBusinessUnitId = 1; // TODO: Harus dinamis
-
-            // Ambil pengaturan stok otomatis
+            $currentBusinessUnitId = 1;
             $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
-                                              ->where('setting_key', 'automatic_stock_management')
-                                              ->first()->setting_value == 'true';
-
-            // --- LOGIKA PENGEMBALIAN STOK DIMULAI DI SINI ---
+                                            ->where('setting_key', 'automatic_stock_management')
+                                            ->first()->setting_value == 'true';
             if ($isStockManagementActive) {
-                // Loop melalui setiap detail transaksi yang akan dibatalkan
                 foreach ($sale->details as $detail) {
-                    $product = $detail->product; // Mengambil produk dari relasi
+                    $product = $detail->product;
                     if ($product) {
-                        // Menambah kembali stok yang tadinya dikurangi
                         $product->increment('stock', $detail->quantity);
                     }
                 }
             }
-            // --- LOGIKA PENGEMBALIAN STOK SELESAI ---
-
-            // Ubah status menjadi 'Cancelled'
             $sale->status = 'Cancelled';
             $sale->save();
-
             DB::commit();
 
+            // [BARU] Catat aktivitas pembatalan setelah berhasil
+            activity()->log("Membatalkan transaksi penjualan dengan invoice #{$sale->invoice_number}");
+
             return redirect()->route('karung.sales.index')
-                             ->with('success', "Transaksi penjualan dengan invoice #{$sale->invoice_number} berhasil dibatalkan.");
+                            ->with('success', "Transaksi penjualan dengan invoice #{$sale->invoice_number} berhasil dibatalkan.");
 
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->route('karung.sales.index')
-                             ->with('error', 'Terjadi kesalahan saat membatalkan transaksi: ' . $e->getMessage());
+                            ->with('error', 'Terjadi kesalahan saat membatalkan transaksi: ' . $e->getMessage());
         }
     }
 }
