@@ -10,22 +10,37 @@
                 <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Detail Transaksi Pembelian</h5>
                     <div>
+                        {{-- [BARU] Tombol Edit hanya muncul untuk yang berhak & jika status Completed --}}
+                        @can('karung.edit_purchases')
+                            @if($purchase->status == 'Completed')
+                                <a href="{{ route('karung.purchases.edit', $purchase->id) }}" class="btn btn-warning btn-sm no-print" title="Edit Transaksi">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                                    </svg> Edit
+                                </a>
+                            @endif
+                        @endcan
+
                         @if($purchase->status == 'Completed')
-                        <form action="{{ route('karung.purchases.cancel', $purchase->id) }}" method="POST" class="d-inline no-print" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan transaksi ini? Aksi ini tidak dapat diurungkan.');">
-                            @csrf
-                            <button type="submit" class="btn btn-danger btn-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16">
-                                  <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.647a.5.5 0 0 0-.708-.708L8 7.293z"/>
-                                </svg>
-                                Batalkan Transaksi
-                            </button>
-                        </form>
+                            @can('karung.cancel_purchases')
+                            <form action="{{ route('karung.purchases.cancel', $purchase->id) }}" method="POST" class="d-inline no-print" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan transaksi ini? Aksi ini tidak dapat diurungkan.');">
+                                @csrf
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16">
+                                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.647a.5.5 0 0 0-.708-.708L8 7.293z"/>
+                                    </svg>
+                                    Batalkan Transaksi
+                                </button>
+                            </form>
+                            @endcan
                         @endif
                         <a href="{{ route('karung.purchases.index') }}" class="btn btn-light btn-sm no-print">
                             &larr; Kembali ke Daftar Pembelian
                         </a>
                     </div>
                 </div>
+                {{-- ... Sisa kode view tidak berubah ... --}}
                 <div class="card-body">
                     @if($purchase->status == 'Cancelled')
                         <div class="alert alert-danger">
@@ -33,7 +48,6 @@
                         </div>
                     @endif
 
-                    {{-- Informasi Utama Transaksi --}}
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <p class="mb-1"><strong>Kode Pembelian:</strong> <span class="badge bg-dark fs-6">{{ $purchase->purchase_code }}</span></p>
@@ -51,14 +65,13 @@
                                 @endif
                             </p>
                         </div>
-                         @if($purchase->notes)
+                        @if($purchase->notes)
                         <div class="col-12 mt-2">
                             <p class="mb-1"><strong>Catatan:</strong> {{ $purchase->notes }}</p>
                         </div>
                         @endif
                     </div>
 
-                    {{-- Tabel Detail Produk --}}
                     <h5 class="mb-3">Rincian Produk yang Dibeli</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
@@ -91,7 +104,6 @@
                         </table>
                     </div>
 
-                    {{-- Tampilan Attachment/Struk --}}
                     @if($purchase->attachment_path)
                     <div class="mt-4">
                         <h5>Lampiran Struk/Nota:</h5>

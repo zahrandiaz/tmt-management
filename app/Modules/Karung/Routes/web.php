@@ -11,56 +11,37 @@ use App\Modules\Karung\Http\Controllers\PurchaseTransactionController;
 use App\Modules\Karung\Http\Controllers\SalesTransactionController;
 use App\Modules\Karung\Http\Controllers\ReportController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes for Karung Module
-|--------------------------------------------------------------------------
-|
-| Semua rute di file ini secara otomatis akan memiliki:
-| - Prefix URL: '/tmt/karung'
-| - Prefix Nama Rute: 'karung.'
-| - Middleware: 'web', 'auth', 'verified'
-| Ini semua diatur terpusat di KarungServiceProvider.php
-|
-*/
-
-// Rute untuk Dashboard Modul Karung
+// Rute Dashboard
 Route::get('/dashboard-modul', [DashboardController::class, 'index'])->name('dashboard')->middleware('permission:karung.access_module');
 
-// --- Rute Master Data ---
+// Rute Master Data
 Route::resource('product-categories', ProductCategoryController::class)->middleware('permission:karung.manage_categories');
 Route::resource('product-types', ProductTypeController::class)->middleware('permission:karung.manage_types');
-Route::resource('suppliers', SupplierController::class)->middleware('permission:karung.manage_suppliers');
-// [BARU] Tambahkan rute ini untuk halaman riwayat supplier
 Route::get('suppliers/{supplier}/history', [SupplierController::class, 'history'])->name('suppliers.history')->middleware('permission:karung.view_purchases');
-
-Route::resource('customers', CustomerController::class)->middleware('permission:karung.manage_customers');
-// [BARU] Tambahkan rute ini untuk halaman riwayat pelanggan
+Route::resource('suppliers', SupplierController::class)->middleware('permission:karung.manage_suppliers');
 Route::get('customers/{customer}/history', [CustomerController::class, 'history'])->name('customers.history')->middleware('permission:karung.view_sales');
-
+Route::resource('customers', CustomerController::class)->middleware('permission:karung.manage_customers');
 Route::resource('products', ProductController::class)->middleware('permission:karung.manage_products');
 
-// --- Rute Transaksi ---
-// Menggunakan 'permission:A|B' berarti pengguna harus punya izin A ATAU B
+// Rute Transaksi Pembelian
 Route::resource('purchases', PurchaseTransactionController::class)
-    ->except(['edit', 'update', 'destroy']) // Sesuai kesepakatan V1
-    ->middleware(['permission:karung.view_purchases|karung.create_purchases']);
+    ->except(['destroy'])
+    ->middleware(['permission:karung.view_purchases|karung.create_purchases|karung.edit_purchases']);
 
-// Rute khusus untuk membatalkan transaksi pembelian
 Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])
     ->name('purchases.cancel')
-    ->middleware('permission:karung.cancel_purchases'); // Pastikan izin ini sesuai
+    ->middleware('permission:karung.cancel_purchases');
 
+// [MODIFIKASI] Rute Transaksi Penjualan
 Route::resource('sales', SalesTransactionController::class)
-    ->except(['edit', 'update', 'destroy']) // Sesuai kesepakatan V1
-    ->middleware(['permission:karung.view_sales|karung.create_sales']);
+    ->except(['destroy']) // <-- Hanya 'destroy' yang dikecualikan
+    ->middleware(['permission:karung.view_sales|karung.create_sales|karung.edit_sales']); // <-- Tambahkan izin edit
 
-// Rute khusus untuk membatalkan transaksi penjualan
 Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])
     ->name('sales.cancel')
-    ->middleware('permission:karung.cancel_sales'); // Pastikan izin ini sesuai
+    ->middleware('permission:karung.cancel_sales');
 
-// --- Rute Laporan ---
+// Rute Laporan
 Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('reports.')->group(function() {
     Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
     Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
