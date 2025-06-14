@@ -1,5 +1,4 @@
 <?php
-// File: app/Modules/Karung/Http/Controllers/SalesTransactionController.php
 
 namespace App\Modules\Karung\Http\Controllers;
 
@@ -16,6 +15,7 @@ class SalesTransactionController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', SalesTransaction::class);
         $status = $request->query('status', 'Completed');
         $query = SalesTransaction::with(['customer', 'details.product'])->where('status', $status);
         if ($request->filled('search')) {
@@ -33,6 +33,7 @@ class SalesTransactionController extends Controller
 
     public function create()
     {
+        $this->authorize('create', SalesTransaction::class);
         $customers = Customer::orderBy('name', 'asc')->get();
         $products = Product::where('is_active', true)->orderBy('name', 'asc')->get();
         return view('karung::sales.create', compact('customers', 'products'));
@@ -40,46 +41,21 @@ class SalesTransactionController extends Controller
 
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'transaction_date'      => ['required', 'date'],
-            'customer_id'           => ['nullable', 'integer', 'exists:karung_customers,id'],
-            'notes'                 => ['nullable', 'string'],
-            'details'               => ['required', 'array', 'min:1'],
-            'details.*.product_id'  => ['required', 'integer', 'exists:karung_products,id'],
-            'details.*.quantity'    => ['required', 'integer', 'min:1'],
-            'details.*.selling_price_at_transaction' => ['required', 'numeric', 'min:0'],
-        ]);
-
+        $this->authorize('create', SalesTransaction::class);
+        $validatedData = $request->validate([ 'transaction_date' => ['required', 'date'], 'customer_id' => ['nullable', 'integer', 'exists:karung_customers,id'], 'notes' => ['nullable', 'string'], 'details' => ['required', 'array', 'min:1'], 'details.*.product_id' => ['required', 'integer', 'exists:karung_products,id'], 'details.*.quantity' => ['required', 'integer', 'min:1'], 'details.*.selling_price_at_transaction' => ['required', 'numeric', 'min:0'], ]);
         try {
             DB::beginTransaction();
-            $currentBusinessUnitId = 1;
-            $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
-                                              ->where('setting_key', 'automatic_stock_management')
-                                              ->first()->setting_value == 'true';
-
+            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
             $customerId = $validatedData['customer_id'];
-            if (is_null($customerId)) {
-                $defaultCustomer = Customer::where('name', 'Pelanggan Umum')->first();
-                $customerId = $defaultCustomer?->id;
-            }
-            $saleData = [
-                'business_unit_id'      => $currentBusinessUnitId, 'customer_id'           => $customerId,
-                'transaction_date'      => $validatedData['transaction_date'], 'notes'                 => $validatedData['notes'],
-                'user_id'               => auth()->id(), 'invoice_number'        => 'INV/'.date('Ymd').'/'.strtoupper(Str::random(6)),
-            ];
+            if (is_null($customerId)) { $defaultCustomer = Customer::where('name', 'Pelanggan Umum')->first(); $customerId = $defaultCustomer?->id; }
+            $saleData = [ 'business_unit_id' => 1, 'customer_id' => $customerId, 'transaction_date' => $validatedData['transaction_date'], 'notes' => $validatedData['notes'], 'user_id' => auth()->id(), 'invoice_number' => 'INV/'.date('Ymd').'/'.strtoupper(Str::random(6)), ];
             $sale = SalesTransaction::create($saleData);
             $totalAmount = 0;
             foreach ($validatedData['details'] as $detail) {
                 $subTotal = $detail['quantity'] * $detail['selling_price_at_transaction'];
-                $sale->details()->create([
-                    'product_id' => $detail['product_id'], 'quantity' => $detail['quantity'],
-                    'selling_price_at_transaction' => $detail['selling_price_at_transaction'], 'sub_total' => $subTotal,
-                ]);
+                $sale->details()->create([ 'product_id' => $detail['product_id'], 'quantity' => $detail['quantity'], 'selling_price_at_transaction' => $detail['selling_price_at_transaction'], 'sub_total' => $subTotal, ]);
                 $totalAmount += $subTotal;
-                if ($isStockManagementActive) {
-                    $product = Product::find($detail['product_id']);
-                    if ($product) { $product->decrement('stock', $detail['quantity']); }
-                }
+                if ($isStockManagementActive) { $product = Product::find($detail['product_id']); if ($product) { $product->decrement('stock', $detail['quantity']); } }
             }
             $sale->total_amount = $totalAmount;
             $sale->save();
@@ -94,83 +70,44 @@ class SalesTransactionController extends Controller
 
     public function show(SalesTransaction $sale)
     {
+        $this->authorize('view', $sale);
         $sale->load(['customer', 'user', 'details.product']);
         return view('karung::sales.show', compact('sale'));
     }
 
-    /**
-     * [BARU] Menampilkan form untuk mengedit transaksi penjualan.
-     */
     public function edit(SalesTransaction $sale)
     {
+        $this->authorize('update', $sale);
         $sale->load('details.product');
         $customers = Customer::orderBy('name', 'asc')->get();
         $products = Product::where('is_active', true)->orderBy('name', 'asc')->get();
         return view('karung::sales.edit', compact('sale', 'customers', 'products'));
     }
 
-    /**
-     * [BARU] Menyimpan perubahan pada transaksi penjualan.
-     */
     public function update(Request $request, SalesTransaction $sale)
     {
-        $validatedData = $request->validate([
-            'transaction_date'      => ['required', 'date'],
-            'customer_id'           => ['nullable', 'integer', 'exists:karung_customers,id'],
-            'notes'                 => ['nullable', 'string'],
-            'details'               => ['required', 'array', 'min:1'],
-            'details.*.product_id'  => ['required', 'integer', 'exists:karung_products,id'],
-            'details.*.quantity'    => ['required', 'integer', 'min:1'],
-            'details.*.selling_price_at_transaction' => ['required', 'numeric', 'min:0'],
-        ]);
-
+        $this->authorize('update', $sale);
+        $validatedData = $request->validate([ 'transaction_date' => ['required', 'date'], 'customer_id' => ['nullable', 'integer', 'exists:karung_customers,id'], 'notes' => ['nullable', 'string'], 'details' => ['required', 'array', 'min:1'], 'details.*.product_id' => ['required', 'integer', 'exists:karung_products,id'], 'details.*.quantity' => ['required', 'integer', 'min:1'], 'details.*.selling_price_at_transaction' => ['required', 'numeric', 'min:0'], ]);
         try {
             DB::beginTransaction();
-            $currentBusinessUnitId = 1;
-            $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
-                                              ->where('setting_key', 'automatic_stock_management')
-                                              ->first()->setting_value == 'true';
-
+            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
             if ($isStockManagementActive) {
-                // 1. Kembalikan stok lama ke kondisi semula (tambah stok)
-                foreach ($sale->details as $oldDetail) {
-                    $product = Product::find($oldDetail->product_id);
-                    if ($product) { $product->increment('stock', $oldDetail->quantity); }
-                }
+                foreach ($sale->details as $oldDetail) { $product = Product::find($oldDetail->product_id); if ($product) { $product->increment('stock', $oldDetail->quantity); } }
             }
-
-            // 2. Update data utama transaksi
-            $sale->update([
-                'transaction_date' => $validatedData['transaction_date'], 'customer_id' => $validatedData['customer_id'],
-                'notes' => $validatedData['notes'], 'user_id' => auth()->id(),
-            ]);
-
-            // 3. Hapus detail lama
+            $sale->update([ 'transaction_date' => $validatedData['transaction_date'], 'customer_id' => $validatedData['customer_id'], 'notes' => $validatedData['notes'], 'user_id' => auth()->id(), ]);
             $sale->details()->delete();
-            
-            // 4. Buat ulang detail baru & kurangi stok
             $newTotalAmount = 0;
             foreach ($validatedData['details'] as $newDetail) {
                 $subTotal = $newDetail['quantity'] * $newDetail['selling_price_at_transaction'];
-                $sale->details()->create([
-                    'product_id' => $newDetail['product_id'], 'quantity' => $newDetail['quantity'],
-                    'selling_price_at_transaction' => $newDetail['selling_price_at_transaction'], 'sub_total' => $subTotal,
-                ]);
+                $sale->details()->create([ 'product_id' => $newDetail['product_id'], 'quantity' => $newDetail['quantity'], 'selling_price_at_transaction' => $newDetail['selling_price_at_transaction'], 'sub_total' => $subTotal, ]);
                 $newTotalAmount += $subTotal;
-                if ($isStockManagementActive) {
-                    $product = Product::find($newDetail['product_id']);
-                    if ($product) { $product->decrement('stock', $newDetail['quantity']); }
-                }
+                if ($isStockManagementActive) { $product = Product::find($newDetail['product_id']); if ($product) { $product->decrement('stock', $newDetail['quantity']); } }
             }
-
-            // 5. Update total amount
             $sale->total_amount = $newTotalAmount;
             $sale->save();
-            
             activity()->log("Memperbarui transaksi penjualan dengan invoice #{$sale->invoice_number}");
             DB::commit();
             return redirect()->route('karung.sales.index')->with('success', 'Transaksi penjualan berhasil diperbarui!');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui transaksi: ' . $e->getMessage())->withInput();
@@ -179,20 +116,12 @@ class SalesTransactionController extends Controller
     
     public function cancel(SalesTransaction $sale)
     {
-        if ($sale->status == 'Cancelled') {
-            return redirect()->route('karung.sales.index')->with('error', 'Transaksi ini sudah pernah dibatalkan sebelumnya.');
-        }
+        $this->authorize('cancel', $sale);
         try {
             DB::beginTransaction();
-            $currentBusinessUnitId = 1;
-            $isStockManagementActive = Setting::where('business_unit_id', $currentBusinessUnitId)
-                                              ->where('setting_key', 'automatic_stock_management')
-                                              ->first()->setting_value == 'true';
+            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
             if ($isStockManagementActive) {
-                foreach ($sale->details as $detail) {
-                    $product = $detail->product;
-                    if ($product) { $product->increment('stock', $detail->quantity); }
-                }
+                foreach ($sale->details as $detail) { $product = $detail->product; if ($product) { $product->increment('stock', $detail->quantity); } }
             }
             $sale->status = 'Cancelled';
             $sale->save();
@@ -202,6 +131,29 @@ class SalesTransactionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->route('karung.sales.index')->with('error', 'Terjadi kesalahan saat membatalkan transaksi: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy(SalesTransaction $sale)
+    {
+        $this->authorize('delete', $sale);
+        try {
+            DB::beginTransaction();
+            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
+            if ($isStockManagementActive) {
+                foreach ($sale->details as $detail) {
+                    $product = Product::find($detail->product_id);
+                    if ($product) { $product->increment('stock', $detail->quantity); }
+                }
+            }
+            $sale->status = 'Deleted';
+            $sale->save();
+            activity()->log("Menghapus transaksi penjualan dengan invoice #{$sale->invoice_number}");
+            DB::commit();
+            return redirect()->route('karung.sales.index')->with('success', "Transaksi #{$sale->invoice_number} berhasil dihapus.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('karung.sales.index')->with('error', 'Terjadi kesalahan saat menghapus transaksi: ' . $e->getMessage());
         }
     }
 }
