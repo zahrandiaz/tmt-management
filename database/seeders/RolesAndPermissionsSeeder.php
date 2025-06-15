@@ -5,7 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\User;
+use App\Models\User; // <-- Pastikan ini ada
+use Illuminate\Support\Facades\Hash; // <-- Tambahkan ini
 use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -32,14 +33,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.view_purchases',
             'karung.create_purchases',
             'karung.cancel_purchases',
-            'karung.edit_purchases',   // <-- [BARU]
-            'karung.delete_purchases', // <-- [BARU]
+            'karung.edit_purchases',
+            'karung.delete_purchases',
 
             'karung.view_sales',
             'karung.create_sales',
             'karung.cancel_sales',
-            'karung.edit_sales',     // <-- [BARU]
-            'karung.delete_sales',   // <-- [BARU]
+            'karung.edit_sales',
+            'karung.delete_sales',
 
             'karung.view_reports',
         ];
@@ -49,13 +50,12 @@ class RolesAndPermissionsSeeder extends Seeder
         }
         $this->command->info('Permissions telah dibuat/diverifikasi.');
 
-        // ... (sisa kode tidak berubah) ...
         $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin TMT', 'guard_name' => 'web']);
         $adminKarungRole = Role::firstOrCreate(['name' => 'Admin Modul Karung', 'guard_name' => 'web']);
         $staffKarungRole = Role::firstOrCreate(['name' => 'Staff Modul Karung', 'guard_name' => 'web']);
         $this->command->info('Roles telah dibuat/diverifikasi.');
 
-        // Berikan semua permissions ke Super Admin TMT (otomatis termasuk yang baru)
+        // Berikan semua permissions ke Super Admin TMT
         $superAdminRole->syncPermissions(Permission::all());
         $this->command->info("Semua permissions telah diberikan ke 'Super Admin TMT'.");
 
@@ -70,10 +70,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.manage_customers',
             'karung.view_purchases',
             'karung.create_purchases',
-            'karung.cancel_purchases', // <-- Admin hanya bisa cancel
+            'karung.cancel_purchases',
             'karung.view_sales',
             'karung.create_sales',
-            'karung.cancel_sales',   // <-- Admin hanya bisa cancel
+            'karung.cancel_sales',
             'karung.view_reports',
         ]);
         $this->command->info("Permissions untuk 'Admin Modul Karung' telah ditetapkan.");
@@ -85,5 +85,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.create_sales',
         ]);
         $this->command->info("Permissions untuk 'Staff Modul Karung' telah ditetapkan.");
+
+        // [BLOK BARU] Buat pengguna Super Admin default jika belum ada
+        $superAdminUser = User::firstOrCreate(
+            ['email' => 'superadmin@tmt.com'], // Kunci untuk mencari pengguna
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'), // Ganti 'password' dengan password yang aman jika perlu
+            ]
+        );
+        // Berikan peran Super Admin TMT ke pengguna tersebut
+        $superAdminUser->assignRole($superAdminRole);
+        
+        $this->command->info("Pengguna Super Admin default telah dibuat/diverifikasi.");
     }
 }

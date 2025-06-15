@@ -4,7 +4,6 @@
 
 @section('module-content')
 <div class="container-fluid">
-    {{-- Inisialisasi Alpine.js dengan data detail transaksi yang ada --}}
     <div x-data="purchaseForm({
         initialItems: {{ json_encode($purchase->details->map(function($detail) {
             return [
@@ -16,7 +15,7 @@
     })">
         <form action="{{ route('karung.purchases.update', $purchase->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
-            @method('PUT') {{-- Method spoofing untuk request UPDATE --}}
+            @method('PUT')
 
             <div class="row">
                 <div class="col-12">
@@ -110,12 +109,13 @@
                                     </tfoot>
                                 </table>
                             </div>
+                            @error('details') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
 
                             {{-- Upload Struk --}}
                             <div class="mb-3 mt-3">
                                 <label for="attachment_path" class="form-label">Ganti Struk/Nota Pembelian (Opsional)</label>
                                 @if($purchase->attachment_path)
-                                    <p class="small text-muted">File saat ini: <a href="{{ asset('storage/' . $purchase->attachment_path) }}" target="_blank">Lihat file</a></p>
+                                    <p class="small text-muted mb-1">File saat ini: <a href="{{ asset('storage/' . $purchase->attachment_path) }}" target="_blank">Lihat file</a></p>
                                 @endif
                                 <input class="form-control @error('attachment_path') is-invalid @enderror" type="file" id="attachment_path" name="attachment_path">
                                 @error('attachment_path') <div class="invalid-feedback">{{ $message }}</div> @enderror
@@ -153,16 +153,13 @@
         return {
             items: config.initialItems.length > 0 ? config.initialItems : [{ product_id: '', quantity: 1, price: 0 }],
             tomSelectInstances: [],
-
             initTomSelect(element, index, initialValue) {
                 const tomSelect = new TomSelect(element, {
                     options: productsData,
                     placeholder: '-- Pilih atau Cari Produk --',
                     maxItems: 1,
-                    items: [initialValue], // Set nilai awal
-                    onChange: (value) => {
-                        this.productChanged(index, value);
-                    }
+                    items: [initialValue],
+                    onChange: (value) => { this.productChanged(index, value); }
                 });
                 this.tomSelectInstances[index] = tomSelect;
             },

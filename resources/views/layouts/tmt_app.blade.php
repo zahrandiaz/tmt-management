@@ -1,6 +1,3 @@
-{{-- ====================================================================== --}}
-{{-- File: resources/views/layouts/tmt_app.blade.php (Layout Utama) --}}
-{{-- ====================================================================== --}}
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -31,13 +28,12 @@
             .table-dark th { background-color: #eee !important; color: black !important; border-color: #ddd !important; }
         }
     </style>
-
+    
     @stack('head-scripts')
 </head>
 <body>
     <div id="tmt_app">
         <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
-            {{-- ... (Isi navbar tidak berubah) ... --}}
             <div class="container-fluid">
                 @if(request()->is('tmt/karung/*') || request()->is('tmt-admin/*'))
                 <button class="btn btn-dark d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#moduleSidebar" aria-controls="moduleSidebar">
@@ -82,7 +78,7 @@
                             <li class="nav-item dropdown">
                                 <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>{{ Auth::user()->name }}</a>
                                 <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profil Saya</a>
+                                     <a class="dropdown-item" href="{{ route('profile.edit') }}">Profil Saya</a>
                                     <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">{{ __('Logout') }}</a>
                                     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf</form>
                                 </div>
@@ -93,22 +89,25 @@
             </div>
         </nav>
 
-        <main>
+        <main class="d-flex flex-grow-1" style="overflow-x: hidden;">
             @yield('content')
         </main>
     </div>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-
+    
     {{-- Memuat Alpine.js --}}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     {{-- JS untuk Tom Select --}}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-
-    {{-- [BARU] JS untuk Chart.js --}}
+    
+    {{-- JS untuk Chart.js --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
+    {{-- [BARU] JS untuk SweetAlert2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     @stack('footer-scripts')
 </body>
 </html>

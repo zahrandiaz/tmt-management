@@ -28,11 +28,12 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
-                                    <input type="datetime-local" class="form-control" id="transaction_date" name="transaction_date" value="{{ old('transaction_date', $sale->transaction_date->format('Y-m-d\TH:i')) }}" required>
+                                    <input type="datetime-local" class="form-control @error('transaction_date') is-invalid @enderror" id="transaction_date" name="transaction_date" value="{{ old('transaction_date', $sale->transaction_date->format('Y-m-d\TH:i')) }}" required>
+                                    @error('transaction_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                                 <div class="col-md-6">
                                     <label for="customer_id" class="form-label">Pelanggan</label>
-                                    <select class="form-select" id="customer_id" name="customer_id">
+                                    <select class="form-select @error('customer_id') is-invalid @enderror" id="customer_id" name="customer_id">
                                         <option value="">-- Penjualan Umum --</option>
                                         @foreach ($customers as $customer)
                                             <option value="{{ $customer->id }}" {{ old('customer_id', $sale->customer_id) == $customer->id ? 'selected' : '' }}>
@@ -40,12 +41,14 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                    @error('customer_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <label for="notes" class="form-label">Catatan (Opsional)</label>
-                                    <textarea class="form-control" id="notes" name="notes" rows="1">{{ old('notes', $sale->notes) }}</textarea>
+                                    <textarea class="form-control @error('notes') is-invalid @enderror" id="notes" name="notes" rows="1">{{ old('notes', $sale->notes) }}</textarea>
+                                    @error('notes') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
 
@@ -100,6 +103,7 @@
                                     </tfoot>
                                 </table>
                             </div>
+                            @error('details') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
 
                             <div class="d-flex justify-content-end mt-4">
                                 <a href="{{ url()->previous() }}" class="btn btn-outline-secondary me-2">Batal</a>

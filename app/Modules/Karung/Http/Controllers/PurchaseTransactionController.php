@@ -8,6 +8,9 @@ use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\Supplier;
 use App\Modules\Karung\Models\Product;
 use App\Modules\Karung\Models\Setting;
+use App\Modules\Karung\Services\StockManagementService; // <-- Pastikan ini di-import
+use App\Modules\Karung\Http\Requests\StorePurchaseTransactionRequest;
+use App\Modules\Karung\Http\Requests\UpdatePurchaseTransactionRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,11 +24,7 @@ class PurchaseTransactionController extends Controller
     {
         $this->authorize('viewAny', PurchaseTransaction::class);
         $status = $request->query('status', 'Completed');
-
-        // [PERBAIKAN LOGIKA] Query diperbaiki agar bisa menampilkan data 'Deleted' dengan benar
-        $query = PurchaseTransaction::with(['supplier', 'details.product'])
-                                    ->where('status', $status);
-        
+        $query = PurchaseTransaction::with(['supplier', 'details.product'])->where('status', $status);
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
             $query->where(function ($q) use ($searchTerm) {
@@ -48,26 +47,36 @@ class PurchaseTransactionController extends Controller
         return view('karung::purchases.create', compact('suppliers', 'products'));
     }
 
-    public function store(Request $request)
+    // [MODIFIKASI] Gunakan StorePurchaseTransactionRequest
+    public function store(StorePurchaseTransactionRequest $request, StockManagementService $stockService)
     {
         $this->authorize('create', PurchaseTransaction::class);
-        $validatedData = $request->validate([ 'transaction_date' => ['required', 'date'], 'supplier_id' => ['nullable', 'integer', 'exists:karung_suppliers,id'], 'purchase_reference_no' => ['nullable', 'string', 'max:255'], 'notes' => ['nullable', 'string'], 'attachment_path' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'], 'details' => ['required', 'array', 'min:1'], 'details.*.product_id'  => ['required', 'integer', 'exists:karung_products,id'], 'details.*.quantity'    => ['required', 'integer', 'min:1'], 'details.*.purchase_price_at_transaction' => ['required', 'numeric', 'min:0'], ]);
+
+        // Data yang masuk di sini sudah dijamin valid oleh StorePurchaseTransactionRequest
+        $validatedData = $request->validated();
+
         try {
             DB::beginTransaction();
-            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
             $supplierId = $validatedData['supplier_id'];
             if (is_null($supplierId)) { $defaultSupplier = Supplier::where('name', 'Pembelian Umum')->first(); $supplierId = $defaultSupplier?->id; }
             $purchaseCode = 'PB/'.date('Ymd').'/'.strtoupper(Str::random(6));
             $purchaseData = ['business_unit_id' => 1, 'purchase_code' => $purchaseCode, 'supplier_id' => $supplierId, 'transaction_date' => $validatedData['transaction_date'], 'purchase_reference_no' => $validatedData['purchase_reference_no'], 'notes' => $validatedData['notes'], 'user_id' => auth()->id(),];
-            if ($request->hasFile('attachment_path')) { $purchaseData['attachment_path'] = $request->file('attachment_path')->store('purchase_attachments', 'public'); }
+            
+            if ($request->hasFile('attachment_path')) {
+                // Gunakan $validatedData karena sudah aman
+                $purchaseData['attachment_path'] = $validatedData['attachment_path']->store('purchase_attachments', 'public');
+            }
+            
             $purchase = PurchaseTransaction::create($purchaseData);
             $totalAmount = 0;
             foreach ($validatedData['details'] as $detail) {
                 $subTotal = $detail['quantity'] * $detail['purchase_price_at_transaction'];
                 $purchase->details()->create(['product_id' => $detail['product_id'], 'quantity' => $detail['quantity'], 'purchase_price_at_transaction' => $detail['purchase_price_at_transaction'], 'sub_total' => $subTotal,]);
                 $totalAmount += $subTotal;
-                if ($isStockManagementActive) { $product = Product::find($detail['product_id']); if ($product) { $product->increment('stock', $detail['quantity']); } }
             }
+            
+            $stockService->handlePurchaseCreation($validatedData['details']);
+            
             $purchase->total_amount = $totalAmount;
             $purchase->save();
             DB::commit();
@@ -95,21 +104,19 @@ class PurchaseTransactionController extends Controller
         return view('karung::purchases.edit', compact('purchase', 'suppliers', 'products'));
     }
 
-    public function update(Request $request, PurchaseTransaction $purchase)
+    // [MODIFIKASI] Gunakan UpdatePurchaseTransactionRequest
+    public function update(UpdatePurchaseTransactionRequest $request, PurchaseTransaction $purchase, StockManagementService $stockService)
     {
         $this->authorize('update', $purchase);
-        $validatedData = $request->validate([ 'transaction_date' => ['required', 'date'], 'supplier_id' => ['nullable', 'integer', 'exists:karung_suppliers,id'], 'purchase_reference_no' => ['nullable', 'string', 'max:255'], 'notes' => ['nullable', 'string'], 'attachment_path' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'], 'details' => ['required', 'array', 'min:1'], 'details.*.product_id'  => ['required', 'integer', 'exists:karung_products,id'], 'details.*.quantity'    => ['required', 'integer', 'min:1'], 'details.*.purchase_price_at_transaction' => ['required', 'numeric', 'min:0'], ]);
+
+        // Data yang masuk di sini sudah dijamin valid oleh UpdatePurchaseTransactionRequest
+        $validatedData = $request->validated();
+        
         try {
             DB::beginTransaction();
-            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
-            if ($isStockManagementActive) {
-                foreach ($purchase->details as $oldDetail) {
-                    $product = Product::find($oldDetail->product_id);
-                    if ($product) { $product->decrement('stock', $oldDetail->quantity); }
-                }
-            }
+            $stockService->handlePurchaseUpdate($purchase, $validatedData['details']);
             $purchaseData = ['transaction_date' => $validatedData['transaction_date'], 'supplier_id' => $validatedData['supplier_id'], 'purchase_reference_no' => $validatedData['purchase_reference_no'], 'notes' => $validatedData['notes'], 'user_id' => auth()->id(),];
-            if ($request->hasFile('attachment_path')) { if ($purchase->attachment_path) { Storage::disk('public')->delete($purchase->attachment_path); } $purchaseData['attachment_path'] = $request->file('attachment_path')->store('purchase_attachments', 'public'); }
+            if ($request->hasFile('attachment_path')) { if ($purchase->attachment_path) { Storage::disk('public')->delete($purchase->attachment_path); } $purchaseData['attachment_path'] = $validatedData['attachment_path']->store('purchase_attachments', 'public'); }
             $purchase->update($purchaseData);
             $purchase->details()->delete();
             $newTotalAmount = 0;
@@ -117,7 +124,6 @@ class PurchaseTransactionController extends Controller
                 $subTotal = $newDetail['quantity'] * $newDetail['purchase_price_at_transaction'];
                 $purchase->details()->create(['product_id' => $newDetail['product_id'], 'quantity' => $newDetail['quantity'], 'purchase_price_at_transaction' => $newDetail['purchase_price_at_transaction'], 'sub_total' => $subTotal,]);
                 $newTotalAmount += $subTotal;
-                if ($isStockManagementActive) { $product = Product::find($newDetail['product_id']); if ($product) { $product->increment('stock', $newDetail['quantity']); } }
             }
             $purchase->total_amount = $newTotalAmount;
             $purchase->save();
@@ -130,15 +136,15 @@ class PurchaseTransactionController extends Controller
         }
     }
 
-    public function cancel(PurchaseTransaction $purchase)
+    public function cancel(PurchaseTransaction $purchase, StockManagementService $stockService)
     {
         $this->authorize('cancel', $purchase);
         try {
             DB::beginTransaction();
-            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
-            if ($isStockManagementActive) {
-                foreach ($purchase->details as $detail) { $product = $detail->product; if ($product) { $product->decrement('stock', $detail->quantity); } }
-            }
+
+            // [REFACTORING] Panggil service untuk menangani logika stok cancel
+            $stockService->handlePurchaseCancellation($purchase);
+
             $purchase->status = 'Cancelled';
             $purchase->save();
             DB::commit();
@@ -150,18 +156,15 @@ class PurchaseTransactionController extends Controller
         }
     }
 
-    public function destroy(PurchaseTransaction $purchase)
+    public function destroy(PurchaseTransaction $purchase, StockManagementService $stockService)
     {
         $this->authorize('delete', $purchase);
         try {
             DB::beginTransaction();
-            $isStockManagementActive = Setting::where('business_unit_id', 1)->where('setting_key', 'automatic_stock_management')->first()->setting_value == 'true';
-            if ($isStockManagementActive) {
-                foreach ($purchase->details as $detail) {
-                    $product = Product::find($detail->product_id);
-                    if ($product) { $product->decrement('stock', $detail->quantity); }
-                }
-            }
+
+            // [REFACTORING] Kita bisa gunakan method yang sama dengan cancel
+            $stockService->handlePurchaseCancellation($purchase);
+
             $purchase->status = 'Deleted';
             $purchase->save();
             activity()->log("Menghapus transaksi pembelian dengan kode #{$purchase->purchase_code}");
