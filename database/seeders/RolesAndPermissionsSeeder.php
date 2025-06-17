@@ -88,10 +88,10 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // [BLOK BARU] Buat pengguna Super Admin default jika belum ada
         $superAdminUser = User::firstOrCreate(
-            ['email' => 'superadmin@tmt.com'], // Kunci untuk mencari pengguna
+            ['email' => 'zahrandiaz99@gmail.com'], // Kunci untuk mencari pengguna
             [
                 'name' => 'Super Admin',
-                'password' => Hash::make('password'), // Ganti 'password' dengan password yang aman jika perlu
+                'password' => Hash::make('admin123'), // Ganti 'password' dengan password yang aman jika perlu
             ]
         );
         // Berikan peran Super Admin TMT ke pengguna tersebut

@@ -40,7 +40,15 @@ Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel']
 // Rute Laporan
 Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('reports.')->group(function() {
     Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
+    Route::get('/sales/export', [ReportController::class, 'exportSales'])->name('sales.export');
+    Route::get('/sales/export-pdf', [ReportController::class, 'exportSalesPdf'])->name('sales.export.pdf');
     Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
+    Route::get('/purchases/export', [ReportController::class, 'exportPurchases'])->name('purchases.export');
+    Route::get('/purchases/export-pdf', [ReportController::class, 'exportPurchasesPdf'])->name('purchases.export.pdf');
     Route::get('/stock', [ReportController::class, 'stockReport'])->name('stock');
+    Route::get('/stock/export', [ReportController::class, 'exportStock'])->name('stock.export');
+    Route::get('/stock/export-pdf', [ReportController::class, 'exportStockPdf'])->name('stock.export.pdf');
     Route::get('/profit-loss', [ReportController::class, 'profitAndLoss'])->name('profit_and_loss');
+    Route::get('/profit-loss/export', [ReportController::class, 'exportProfitLoss'])->name('profit_loss.export');
+    Route::get('/profit-loss/export-pdf', [ReportController::class, 'exportProfitLossPdf'])->name('profit_loss.export.pdf');
 });

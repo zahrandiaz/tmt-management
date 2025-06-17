@@ -7,7 +7,7 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Laporan Pembelian</h5>
                     <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">
@@ -17,9 +17,9 @@
                     </a>
                 </div>
                 <div class="card-body">
-                    {{-- Form Filter Tanggal --}}
-                    <form action="{{ route('karung.reports.purchases') }}" method="GET" class="mb-4">
-                        <div class="row g-3 align-items-end">
+                    {{-- [MODIFIKASI] Form Filter dengan tambahan dropdown --}}
+                    <form method="GET" action="{{ route('karung.reports.purchases') }}" class="mb-4">
+                        <div class="row g-3">
                             <div class="col-md-4">
                                 <label for="start_date" class="form-label">Tanggal Mulai</label>
                                 <input type="date" class="form-control" id="start_date" name="start_date" value="{{ $startDate }}">
@@ -29,19 +29,42 @@
                                 <input type="date" class="form-control" id="end_date" name="end_date" value="{{ $endDate }}">
                             </div>
                             <div class="col-md-4">
-                                <button type="submit" class="btn btn-primary">Tampilkan Laporan</button>
-                                {{-- Nanti bisa tambah tombol Export PDF/Excel di sini --}}
+                                <label for="supplier_id" class="form-label">Supplier</label>
+                                <select name="supplier_id" id="supplier_id" class="form-select">
+                                    <option value="">Semua Supplier</option>
+                                    @foreach($suppliers as $supplier)
+                                        <option value="{{ $supplier->id }}" {{ $selectedSupplierId == $supplier->id ? 'selected' : '' }}>
+                                            {{ $supplier->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Filter Laporan</button>
                             </div>
                         </div>
                     </form>
 
+                    <div class="mb-4">
+                        <strong>Export Laporan:</strong>
+                        <a href="{{ route('karung.reports.purchases.export', request()->query()) }}" class="btn btn-success btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel-fill" viewBox="0 0 16 16">...</svg>
+                            Excel
+                        </a>
+                        <a href="{{ route('karung.reports.purchases.export.pdf', request()->query()) }}" class="btn btn-danger btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill" viewBox="0 0 16 16">...</svg>
+                            PDF
+                        </a>
+                    </div>
+                    
                     <hr>
 
-                    {{-- Ringkasan Laporan --}}
-                    <h5 class="mb-3">Ringkasan Laporan untuk Periode {{ \Carbon\Carbon::parse($startDate)->format('d F Y') }} s/d {{ \Carbon\Carbon::parse($endDate)->format('d F Y') }}</h5>
+                    <h5 class="mb-3">Ringkasan Laporan</h5>
                     <div class="row mb-4">
                         <div class="col-md-6">
-                            <div class="card text-white bg-danger"> {{-- Ubah warna untuk pengeluaran --}}
+                            <div class="card text-white bg-danger">
                                 <div class="card-body">
                                     <h6 class="card-title">Total Pengeluaran Pembelian</h6>
                                     <p class="card-text fs-4 fw-bold">Rp {{ number_format($totalSpending, 0, ',', '.') }}</p>
@@ -58,7 +81,7 @@
                         </div>
                     </div>
 
-                    {{-- Tabel Detail Transaksi --}}
+                    <h5 class="mb-3">Tabel Detail Transaksi</h5>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="table-dark">
@@ -74,20 +97,21 @@
                                 @forelse ($purchases as $purchase)
                                     <tr>
                                         <td>{{ $purchase->transaction_date->format('d-m-Y') }}</td>
-                                        <td>{{ $purchase->purchase_reference_no ?: '-' }}</td>
+                                        <td><a href="{{ route('karung.purchases.show', $purchase->id) }}">{{ $purchase->purchase_code }}</a></td>
                                         <td>{{ $purchase->supplier?->name ?: 'Pembelian Umum' }}</td>
                                         <td class="text-end">Rp {{ number_format($purchase->total_amount, 0, ',', '.') }}</td>
                                         <td>{{ $purchase->user?->name ?: 'N/A' }}</td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center">Tidak ada data transaksi pembelian pada rentang tanggal yang dipilih.</td>
-                                    </tr>
+                                    <tr><td colspan="5" class="text-center">Tidak ada data transaksi pembelian.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
 
+                    <div class="mt-3">
+                        {{ $purchases->appends(request()->query())->links() }}
+                    </div>
                 </div>
             </div>
         </div>

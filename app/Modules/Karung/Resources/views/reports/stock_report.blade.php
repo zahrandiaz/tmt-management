@@ -9,21 +9,47 @@
             <div class="card">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Laporan Stok Produk</h5>
-                    <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">
-                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
-                        </svg>
-                        Kembali ke Dashboard
-                    </a>
-                    {{-- Nanti bisa tambah tombol Export PDF/Excel di sini --}}
+                    <div>
+                        <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">...</svg>
+                            Kembali ke Dashboard
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
-                    {{-- Nanti kita bisa tambahkan form filter di sini (berdasarkan kategori, jenis, dll) --}}
+                    {{-- [BARU] Form Filter --}}
+                    <form method="GET" action="{{ route('karung.reports.stock') }}" class="mb-4">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label for="category_id" class="form-label">Filter Berdasarkan Kategori</label>
+                                <select name="category_id" id="category_id" class="form-select">
+                                    <option value="">Semua Kategori</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->id }}" {{ $selectedCategoryId == $category->id ? 'selected' : '' }}>
+                                            {{ $category->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary">Filter</button>
+                            </div>
+                        </div>
+                    </form>
 
-                    <div class="alert alert-info">
-                        <strong>Info:</strong> Laporan ini menampilkan jumlah stok yang tercatat di master data produk (stok referensi/manual), bukan stok hasil kalkulasi transaksi.
+                    <div class="mb-4">
+                        <strong>Export Laporan:</strong>
+                        <a href="{{ route('karung.reports.stock.export', request()->query()) }}" class="btn btn-success btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel-fill" viewBox="0 0 16 16">...</svg>
+                            Excel
+                        </a>
+                        <a href="{{ route('karung.reports.stock.export.pdf', request()->query()) }}" class="btn btn-danger btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill" viewBox="0 0 16 16">...</svg>
+                            PDF
+                        </a>
                     </div>
 
+                    <p>Halaman ini menampilkan daftar semua produk beserta jumlah stok, harga, dan nilai inventaris saat ini.</p>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="table-dark">
