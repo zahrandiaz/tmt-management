@@ -79,14 +79,12 @@
                                                         <a href="{{ route('karung.sales.edit', $sale->id) }}" class="btn btn-warning btn-sm" title="Edit Transaksi"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg></a>
                                                     @endcan
                                                     @can('karung.cancel_sales')
-                                                        {{-- [MODIFIKASI] --}}
                                                         <form action="{{ route('karung.sales.cancel', $sale->id) }}" method="POST" class="d-inline cancel-form">
                                                             @csrf
                                                             <button type="submit" class="btn btn-danger btn-sm" title="Batalkan Transaksi"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/></svg></button>
                                                         </form>
                                                     @endcan
                                                     @can('karung.delete_sales')
-                                                        {{-- [MODIFIKASI] --}}
                                                         <form action="{{ route('karung.sales.destroy', $sale->id) }}" method="POST" class="d-inline delete-form">
                                                             @csrf
                                                             @method('DELETE')
@@ -95,7 +93,20 @@
                                                     @endcan
                                                 @endif
                                             @else
-                                                <span class="text-muted fst-italic">Tidak ada aksi</span>
+                                                {{-- [MODIFIKASI DI SINI] --}}
+                                                @can('restore', $sale)
+                                                    <form action="{{ route('karung.sales.restore', $sale->id) }}" method="POST" class="d-inline restore-form">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-success btn-sm" title="Pulihkan Transaksi">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-counterclockwise" viewBox="0 0 16 16">
+                                                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/>
+                                                                <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <span class="text-muted fst-italic">Tidak ada aksi</span>
+                                                @endcan
                                             @endif
                                         </td>
                                     </tr>
@@ -115,7 +126,6 @@
 </div>
 @endsection
 
-{{-- [BARU] Script SweetAlert2 untuk halaman ini --}}
 @push('footer-scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -151,6 +161,27 @@
                     cancelButtonColor: '#3085d6',
                     confirmButtonText: 'Ya, Batalkan!',
                     cancelButtonText: 'Tidak'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+
+        // [MODIFIKASI DI SINI] Menambahkan event listener untuk restore
+        document.querySelectorAll('.restore-form').forEach(form => {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                Swal.fire({
+                    title: 'Pulihkan Transaksi?',
+                    text: "Transaksi akan dikembalikan ke status 'Completed' dan stok akan disesuaikan.",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Pulihkan!',
+                    cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         form.submit();

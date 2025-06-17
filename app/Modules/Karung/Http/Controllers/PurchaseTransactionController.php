@@ -136,6 +136,32 @@ class PurchaseTransactionController extends Controller
         }
     }
 
+    // [BARU] Method untuk restore
+    public function restore(PurchaseTransaction $purchase, StockManagementService $stockService)
+    {
+        $this->authorize('restore', $purchase);
+        
+        try {
+            DB::beginTransaction();
+            
+            // Saat restore, stok dikembalikan (ditambah) seolah-olah terjadi pembelian baru
+            $stockService->handlePurchaseCreation($purchase->details->toArray());
+            
+            $purchase->status = 'Completed';
+            $purchase->save();
+            activity()->log("Memulihkan transaksi pembelian dengan kode #{$purchase->purchase_code}");
+            DB::commit();
+            
+            return redirect()->route('karung.purchases.index', ['status' => 'Deleted'])
+                             ->with('success', "Transaksi #{$purchase->purchase_code} berhasil dipulihkan.");
+                             
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('karung.purchases.index', ['status' => 'Deleted'])
+                             ->with('error', 'Terjadi kesalahan saat memulihkan transaksi: ' . $e->getMessage());
+        }
+    }
+
     public function cancel(PurchaseTransaction $purchase, StockManagementService $stockService)
     {
         $this->authorize('cancel', $purchase);

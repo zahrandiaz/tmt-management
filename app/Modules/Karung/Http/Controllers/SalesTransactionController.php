@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Karung\Models\SalesTransaction;
 use App\Modules\Karung\Models\Customer;
 use App\Modules\Karung\Models\Product;
-use App\Modules\Karung\Services\StockManagementService; // <-- [BARU] Import service
+use App\Modules\Karung\Services\StockManagementService;
 use App\Modules\Karung\Http\Requests\StoreSalesTransactionRequest;
 use App\Modules\Karung\Http\Requests\UpdateSalesTransactionRequest;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 
 class SalesTransactionController extends Controller
 {
+    // ... method index() tidak berubah ...
     public function index(Request $request)
     {
         $this->authorize('viewAny', SalesTransaction::class);
@@ -34,18 +35,33 @@ class SalesTransactionController extends Controller
         return view('karung::sales.index', compact('sales', 'status'));
     }
 
+
     public function create()
     {
         $this->authorize('create', SalesTransaction::class);
         $customers = Customer::orderBy('name', 'asc')->get();
-        $products = Product::where('is_active', true)->orderBy('name', 'asc')->get();
+        // [MODIFIKASI] Tambahkan ->where('stock', '>', 0)
+        $products = Product::where('is_active', true)
+                           ->where('stock', '>', 0)
+                           ->orderBy('name', 'asc')->get();
         return view('karung::sales.create', compact('customers', 'products'));
     }
 
-    // [MODIFIKASI] Gunakan StoreSalesTransactionRequest
+    // ... method store() tidak berubah ...
     public function store(StoreSalesTransactionRequest $request, StockManagementService $stockService)
     {
         $this->authorize('create', SalesTransaction::class);
+
+        // [BARU] Validasi backend untuk stok sebelum menyimpan
+        foreach ($request->details as $detail) {
+            $product = Product::find($detail['product_id']);
+            if ($product->stock < $detail['quantity']) {
+                return redirect()->back()
+                                 ->with('error', "Stok untuk produk '{$product->name}' tidak mencukupi (tersisa {$product->stock}).")
+                                 ->withInput();
+            }
+        }
+        
         $validatedData = $request->validated();
         try {
             DB::beginTransaction();
@@ -71,6 +87,8 @@ class SalesTransactionController extends Controller
         }
     }
 
+
+    // ... method show() tidak berubah ...
     public function show(SalesTransaction $sale)
     {
         $this->authorize('view', $sale);
@@ -78,19 +96,46 @@ class SalesTransactionController extends Controller
         return view('karung::sales.show', compact('sale'));
     }
 
+
     public function edit(SalesTransaction $sale)
     {
         $this->authorize('update', $sale);
         $sale->load('details.product');
         $customers = Customer::orderBy('name', 'asc')->get();
-        $products = Product::where('is_active', true)->orderBy('name', 'asc')->get();
+        
+        // [MODIFIKASI] Kita ambil semua produk aktif, lalu di view kita akan gabungkan
+        // dengan produk yang sudah ada di transaksi (meskipun stoknya 0)
+        $activeProducts = Product::where('is_active', true)
+                                 ->where('stock', '>', 0)
+                                 ->orderBy('name', 'asc')->get();
+        
+        // Gabungkan produk aktif dengan produk yang sudah ada di transaksi ini
+        $existingProducts = $sale->details->pluck('product');
+        $products = $activeProducts->merge($existingProducts)->unique('id');
+
         return view('karung::sales.edit', compact('sale', 'customers', 'products'));
     }
 
-    // [MODIFIKASI] Gunakan UpdateSalesTransactionRequest
+    // ... sisa method (update, cancel, destroy) tidak ada perubahan ...
     public function update(UpdateSalesTransactionRequest $request, SalesTransaction $sale, StockManagementService $stockService)
     {
         $this->authorize('update', $sale);
+
+        // [BARU] Validasi backend untuk stok sebelum menyimpan
+        foreach ($request->details as $detail) {
+            $product = Product::find($detail['product_id']);
+            $originalDetail = $sale->details->firstWhere('product_id', $product->id);
+            $originalQuantity = $originalDetail ? $originalDetail->quantity : 0;
+            // Stok yang tersedia adalah stok saat ini + stok yang akan dikembalikan dari transaksi edit
+            $availableStock = $product->stock + $originalQuantity; 
+
+            if ($availableStock < $detail['quantity']) {
+                 return redirect()->back()
+                                 ->with('error', "Stok untuk produk '{$product->name}' tidak mencukupi (tersedia {$availableStock}).")
+                                 ->withInput();
+            }
+        }
+
         $validatedData = $request->validated();
         try {
             DB::beginTransaction();
@@ -114,15 +159,38 @@ class SalesTransactionController extends Controller
         }
     }
     
-    public function cancel(SalesTransaction $sale, StockManagementService $stockService) // [MODIFIKASI]
+    // [BARU] Method untuk restore
+    public function restore(SalesTransaction $sale, StockManagementService $stockService)
+    {
+        $this->authorize('restore', $sale);
+        
+        try {
+            DB::beginTransaction();
+
+            // Saat restore, stok dikurangi lagi seolah-olah terjadi penjualan baru
+            $stockService->handleSaleCreation($sale->details->toArray());
+
+            $sale->status = 'Completed';
+            $sale->save();
+            activity()->log("Memulihkan transaksi penjualan dengan invoice #{$sale->invoice_number}");
+            DB::commit();
+
+            return redirect()->route('karung.sales.index', ['status' => 'Deleted'])
+                             ->with('success', "Transaksi #{$sale->invoice_number} berhasil dipulihkan.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('karung.sales.index', ['status' => 'Deleted'])
+                             ->with('error', 'Terjadi kesalahan saat memulihkan transaksi: ' . $e->getMessage());
+        }
+    }
+
+    public function cancel(SalesTransaction $sale, StockManagementService $stockService)
     {
         $this->authorize('cancel', $sale);
         try {
             DB::beginTransaction();
-
-            // [REFACTORING] Panggil service untuk menangani logika stok cancel
             $stockService->handleSaleCancellation($sale);
-            
             $sale->status = 'Cancelled';
             $sale->save();
             DB::commit();
@@ -134,15 +202,12 @@ class SalesTransactionController extends Controller
         }
     }
 
-    public function destroy(SalesTransaction $sale, StockManagementService $stockService) // [MODIFIKASI]
+    public function destroy(SalesTransaction $sale, StockManagementService $stockService)
     {
         $this->authorize('delete', $sale);
         try {
             DB::beginTransaction();
-
-            // [REFACTORING] Kita bisa gunakan method yang sama dengan cancel
             $stockService->handleSaleCancellation($sale);
-            
             $sale->status = 'Deleted';
             $sale->save();
             activity()->log("Menghapus transaksi penjualan dengan invoice #{$sale->invoice_number}");

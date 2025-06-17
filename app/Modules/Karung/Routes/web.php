@@ -24,18 +24,17 @@ Route::resource('customers', CustomerController::class)->middleware('permission:
 Route::resource('products', ProductController::class)->middleware('permission:karung.manage_products');
 
 // Rute Transaksi Pembelian
-// [PERBAIKAN KEAMANAN] Kita sederhanakan middleware di sini dan biarkan Policy di Controller yang bekerja
 Route::resource('purchases', PurchaseTransactionController::class)->middleware('permission:karung.access_module');
-
-Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])
-    ->name('purchases.cancel'); // Middleware akan ditangani oleh Policy di dalam method
+Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])->name('purchases.cancel');
+// [BARU] Route untuk restore pembelian
+Route::post('purchases/{purchase}/restore', [PurchaseTransactionController::class, 'restore'])->name('purchases.restore');
 
 // Rute Transaksi Penjualan
-// [PERBAIKAN KEAMANAN] Kita sederhanakan middleware di sini juga
 Route::resource('sales', SalesTransactionController::class)->middleware('permission:karung.access_module');
+Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])->name('sales.cancel');
+// [BARU] Route untuk restore penjualan
+Route::post('sales/{sale}/restore', [SalesTransactionController::class, 'restore'])->name('sales.restore');
 
-Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])
-    ->name('sales.cancel'); // Middleware akan ditangani oleh Policy di dalam method
 
 // Rute Laporan
 Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('reports.')->group(function() {

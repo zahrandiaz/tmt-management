@@ -9,11 +9,14 @@
             return [
                 'product_id' => $detail->product_id,
                 'quantity' => $detail->quantity,
-                'price' => $detail->selling_price_at_transaction
+                'price' => $detail->selling_price_at_transaction,
+                'stock' => ($detail->product->stock ?? 0) + $detail->quantity, // Stok saat ini + stok dari transaksi ini
+                'error' => ''
             ];
-        })) }}
+        })) }},
+        productsData: productsData
     })">
-        <form action="{{ route('karung.sales.update', $sale->id) }}" method="POST">
+        <form action="{{ route('karung.sales.update', $sale->id) }}" method="POST" @submit="validateForm">
             @csrf
             @method('PUT')
 
@@ -24,8 +27,9 @@
                             <h5 class="mb-0">Edit Transaksi Penjualan: {{ $sale->invoice_number }}</h5>
                         </div>
                         <div class="card-body">
-                            {{-- Data Utama Transaksi --}}
-                            <div class="row mb-3">
+                             @include('karung::components.flash-message')
+                            {{-- ... (Bagian atas form tidak berubah) ... --}}
+                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
                                     <input type="datetime-local" class="form-control @error('transaction_date') is-invalid @enderror" id="transaction_date" name="transaction_date" value="{{ old('transaction_date', $sale->transaction_date->format('Y-m-d\TH:i')) }}" required>
@@ -52,7 +56,6 @@
                                 </div>
                             </div>
 
-                            {{-- Detail Produk --}}
                             <h5 class="mb-3">Detail Produk</h5>
                             <div class="table-responsive">
                                 <table class="table table-bordered">
@@ -73,7 +76,10 @@
                                                     <input :id="'product-select-' + index" x-init="initTomSelect($el, index, item.product_id)" />
                                                 </td>
                                                 <td>
-                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="item.quantity = Math.max(1, item.quantity)" class="form-control" placeholder="Jumlah" required min="1">
+                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="validateStock(index)" class="form-control" :class="{'is-invalid': item.error}" placeholder="Jumlah" required min="1">
+                                                     <template x-if="item.error">
+                                                        <div class="text-danger small mt-1" x-text="item.error"></div>
+                                                    </template>
                                                 </td>
                                                 <td>
                                                     <input type="number" :name="'details[' + index + '][selling_price_at_transaction]'" x-model.number="item.price" class="form-control" placeholder="Harga Jual" required min="0">
@@ -107,7 +113,7 @@
 
                             <div class="d-flex justify-content-end mt-4">
                                 <a href="{{ url()->previous() }}" class="btn btn-outline-secondary me-2">Batal</a>
-                                <button type="submit" class="btn btn-warning">Simpan Perubahan</button>
+                                <button type="submit" class="btn btn-warning" :disabled="items.length === 0 || items.some(item => !item.product_id || item.error)">Simpan Perubahan</button>
                             </div>
                         </div>
                     </div>
@@ -119,11 +125,13 @@
 @endsection
 
 @php
+    // [MODIFIKASI] Menambahkan 'stock' ke dalam JSON
     $productsJson = $products->map(function($product) {
         return [
             'value' => $product->id,
             'text' => $product->name . ' (Stok: ' . $product->stock . ')',
             'selling_price' => $product->selling_price,
+            'stock' => $product->stock,
         ];
     });
 @endphp
@@ -133,13 +141,16 @@
 
 @push('footer-scripts')
 <script>
+    // Logika Alpine.js SAMA PERSIS dengan halaman create.blade.php
     function salesForm(config) {
         return {
-            items: config.initialItems.length > 0 ? config.initialItems : [{ product_id: '', quantity: 1, price: 0 }],
+            items: config.initialItems.length > 0 ? config.initialItems : [{ product_id: '', quantity: 1, price: 0, stock: Infinity, error: '' }],
+            productsData: config.productsData,
             tomSelectInstances: [],
+
             initTomSelect(element, index, initialValue) {
                 const tomSelect = new TomSelect(element, {
-                    options: productsData,
+                    options: this.productsData,
                     placeholder: '-- Pilih atau Cari Produk --',
                     maxItems: 1,
                     items: [initialValue],
@@ -147,21 +158,59 @@
                 });
                 this.tomSelectInstances[index] = tomSelect;
             },
+
             productChanged(index, selectedProductId) {
                 this.items[index].product_id = selectedProductId;
-                const selectedProduct = productsData.find(p => p.value == selectedProductId);
-                if (selectedProduct && this.items[index].price == 0) {
+                const selectedProduct = this.productsData.find(p => p.value == selectedProductId);
+                if (selectedProduct) {
                     this.items[index].price = selectedProduct.selling_price;
-                } else if (!selectedProduct) {
-                    this.items[index].price = 0;
+                    // Untuk edit, stok yang tersedia adalah stok database saat ini
+                    // karena stok lama sudah dikembalikan oleh Alpine di atas.
+                    this.items[index].stock = selectedProduct.stock;
+                    this.validateStock(index);
+                } else {
+                     this.items[index].price = 0;
+                     this.items[index].stock = Infinity;
+                     this.items[index].error = '';
                 }
             },
-            addItem() { this.items.push({ product_id: '', quantity: 1, price: 0 }); },
+            
+            validateStock(index) {
+                const item = this.items[index];
+                if (item.quantity > item.stock) {
+                    item.error = `Stok tidak cukup (tersedia ${item.stock})`;
+                } else {
+                    item.error = '';
+                }
+            },
+            
+            validateForm(event) {
+                let hasError = false;
+                this.items.forEach((item, index) => {
+                    this.validateStock(index);
+                    if(item.error) {
+                        hasError = true;
+                    }
+                });
+
+                if (hasError) {
+                    event.preventDefault();
+                    Swal.fire({
+                        title: 'Validasi Gagal!',
+                        text: 'Harap perbaiki semua error pada detail produk sebelum menyimpan.',
+                        icon: 'error'
+                    });
+                }
+            },
+
+            addItem() { this.items.push({ product_id: '', quantity: 1, price: 0, stock: Infinity, error: '' }); },
+            
             removeItem(index) {
                 if (this.tomSelectInstances[index]) { this.tomSelectInstances[index].destroy(); }
                 this.items.splice(index, 1);
                 this.tomSelectInstances.splice(index, 1);
             },
+            
             get total() {
                 return this.items.reduce((sum, item) => {
                     const quantity = isNaN(item.quantity) || item.quantity < 1 ? 0 : item.quantity;
@@ -169,6 +218,7 @@
                     return sum + (quantity * price);
                 }, 0);
             },
+            
             formatCurrency(value) {
                 if (isNaN(value)) return 'Rp 0';
                 return 'Rp ' + new Intl.NumberFormat('id-ID').format(value);

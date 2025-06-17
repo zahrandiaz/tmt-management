@@ -6,7 +6,7 @@
 <div class="container-fluid">
     {{-- Kita bungkus semua dalam satu komponen Alpine.js --}}
     <div x-data="salesForm(productsData)">
-        <form action="{{ route('karung.sales.store') }}" method="POST" @submit.prevent="submitForm">
+        <form action="{{ route('karung.sales.store') }}" method="POST" @submit="validateForm">
             @csrf
             <div class="row">
                 <div class="col-12">
@@ -15,6 +15,7 @@
                             <h5 class="mb-0">Catat Transaksi Penjualan Baru</h5>
                         </div>
                         <div class="card-body">
+                             @include('karung::components.flash-message')
                             {{-- ... (Bagian atas form tidak berubah, jadi saya persingkat di sini) ... --}}
                             <div class="row mb-3">
                                 <div class="col-md-6">
@@ -60,7 +61,11 @@
                                                     <input :id="'product-select-' + index" x-init="initTomSelect($el, index)" />
                                                 </td>
                                                 <td>
-                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="item.quantity = Math.max(1, item.quantity)" class="form-control" placeholder="Jumlah" required min="1">
+                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="validateStock(index)" class="form-control" :class="{'is-invalid': item.error}" placeholder="Jumlah" required min="1">
+                                                    {{-- [BARU] Pesan error --}}
+                                                    <template x-if="item.error">
+                                                        <div class="text-danger small mt-1" x-text="item.error"></div>
+                                                    </template>
                                                 </td>
                                                 <td>
                                                     <input type="number" :name="'details[' + index + '][selling_price_at_transaction]'" x-model.number="item.price" class="form-control" placeholder="Harga Jual" required min="0">
@@ -93,7 +98,8 @@
 
                             <div class="d-flex justify-content-end mt-4">
                                 <a href="{{ route('karung.sales.index') }}" class="btn btn-outline-secondary me-2">Batal</a>
-                                <button type="submit" class="btn btn-success" :disabled="items.length === 0 || items.some(item => !item.product_id)">Simpan Transaksi Penjualan</button>
+                                {{-- [MODIFIKASI] Tombol submit dinonaktifkan jika ada error --}}
+                                <button type="submit" class="btn btn-success" :disabled="items.length === 0 || items.some(item => !item.product_id || item.error)">Simpan Transaksi Penjualan</button>
                             </div>
                         </div>
                     </div>
@@ -104,13 +110,14 @@
 </div>
 @endsection
 
-{{-- [PERBAIKAN] Data PHP ke JS dideklarasikan di luar komponen Alpine --}}
 @php
+    // [MODIFIKASI] Menambahkan 'stock' ke dalam JSON
     $productsJson = $products->map(function($product) {
         return [
             'value' => $product->id,
             'text' => $product->name . ' (Stok: ' . $product->stock . ')',
             'selling_price' => $product->selling_price,
+            'stock' => $product->stock,
         ];
     });
 @endphp
@@ -122,7 +129,7 @@
 <script>
     function salesForm(products) {
         return {
-            items: [{ product_id: '', quantity: 1, price: 0 }],
+            items: [{ product_id: '', quantity: 1, price: 0, stock: Infinity, error: '' }],
             tomSelectInstances: [], 
 
             initTomSelect(element, index) {
@@ -142,19 +149,51 @@
                 const selectedProduct = products.find(p => p.value == selectedProductId);
                 if (selectedProduct) {
                     this.items[index].price = selectedProduct.selling_price;
+                    this.items[index].stock = selectedProduct.stock;
+                    this.validateStock(index);
                 } else {
                     this.items[index].price = 0;
+                    this.items[index].stock = Infinity;
+                    this.items[index].error = '';
+                }
+            },
+
+            // [BARU] Fungsi validasi stok
+            validateStock(index) {
+                const item = this.items[index];
+                if (item.quantity > item.stock) {
+                    item.error = `Stok tidak cukup (tersisa ${item.stock})`;
+                } else {
+                    item.error = '';
+                }
+            },
+            
+            // [BARU] Fungsi validasi sebelum submit
+            validateForm(event) {
+                let hasError = false;
+                this.items.forEach((item, index) => {
+                    this.validateStock(index);
+                    if(item.error) {
+                        hasError = true;
+                    }
+                });
+
+                if (hasError) {
+                    event.preventDefault();
+                    Swal.fire({
+                        title: 'Validasi Gagal!',
+                        text: 'Harap perbaiki semua error pada detail produk sebelum menyimpan.',
+                        icon: 'error'
+                    });
                 }
             },
 
             addItem() {
-                this.items.push({ product_id: '', quantity: 1, price: 0 });
+                this.items.push({ product_id: '', quantity: 1, price: 0, stock: Infinity, error: '' });
             },
 
             removeItem(index) {
-                if (this.tomSelectInstances[index]) {
-                    this.tomSelectInstances[index].destroy();
-                }
+                if (this.tomSelectInstances[index]) { this.tomSelectInstances[index].destroy(); }
                 this.items.splice(index, 1);
                 this.tomSelectInstances.splice(index, 1);
             },
@@ -168,14 +207,8 @@
             },
             
             formatCurrency(value) {
-                if (isNaN(value)) {
-                    return 'Rp 0';
-                }
+                if (isNaN(value)) { return 'Rp 0'; }
                 return 'Rp ' + new Intl.NumberFormat('id-ID').format(value);
-            },
-            
-            submitForm(event) {
-                event.target.submit();
             }
         }
     }

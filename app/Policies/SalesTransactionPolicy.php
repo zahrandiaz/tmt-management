@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\Response;
 
 class SalesTransactionPolicy
 {
+    // ... (method viewAny, view, create, update, delete, cancel tidak berubah) ...
     public function viewAny(User $user): bool
     {
         return $user->can('karung.view_sales');
@@ -38,5 +39,14 @@ class SalesTransactionPolicy
         return $user->can('karung.cancel_sales') && $salesTransaction->status === 'Completed';
     }
 
-    // ... sisa method (restore, forceDelete) bisa dibiarkan
+    /**
+     * [BARU] Determine whether the user can restore the model.
+     * Hanya Super Admin TMT yang bisa mengembalikan data dari 'sampah'.
+     */
+    public function restore(User $user, SalesTransaction $salesTransaction): bool
+    {
+        return $user->hasRole('Super Admin TMT');
+    }
+
+    // ... sisa method (forceDelete) bisa dibiarkan
 }
