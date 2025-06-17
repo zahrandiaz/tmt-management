@@ -4,147 +4,176 @@
 
 @section('module-content')
 <div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-md-12">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Dashboard Modul Karung</h1>
+    </div>
 
-            {{-- Blok Notifikasi Stok Kritis (Sudah Ada) --}}
-            @if(isset($criticalStockProducts) && $criticalStockProducts->isNotEmpty())
-            <div class="alert alert-warning border-0 border-start border-5 border-warning shadow-sm mb-4" role="alert">
-                {{-- ... Konten Notifikasi ... --}}
-                <div class="d-flex align-items-center">
-                    <div class="fs-3 me-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <h5 class="alert-heading fw-bold">Peringatan Stok Kritis!</h5>
-                        <p class="mb-1">Produk berikut memiliki stok di bawah atau sama dengan level minimum. Segera lakukan pemesanan ulang.</p>
-                        <ul class="mb-0 small">
-                            @foreach ($criticalStockProducts as $product)
-                                <li>
-                                    <strong>{{ $product->name }}</strong> - Stok saat ini: {{ $product->stock }} (Minimum: {{ $product->min_stock_level }})
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            @endif
+    <div class="row">
+        <div class="col-12 mb-3">
+            @can('karung.create_sales')
+                <a href="{{ route('karung.sales.create') }}" class="btn btn-lg btn-success shadow-sm me-2 mb-2">
+                    <i class="bi bi-cart-plus-fill me-2"></i>Catat Penjualan
+                </a>
+            @endcan
+            @can('karung.create_purchases')
+                <a href="{{ route('karung.purchases.create') }}" class="btn btn-lg btn-primary shadow-sm me-2 mb-2">
+                    <i class="bi bi-truck me-2"></i>Catat Pembelian
+                </a>
+            @endcan
+            @can('karung.manage_products')
+                 <a href="{{ route('karung.products.create') }}" class="btn btn-lg btn-warning shadow-sm me-2 mb-2">
+                    <i class="bi bi-box-seam-fill me-2"></i>Tambah Produk
+                </a>
+            @endcan
+        </div>
+    </div>
 
-            <div class="card mb-4">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up me-2" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5z"/>
-                        </svg>
-                        Grafik Penjualan 7 Hari Terakhir
-                    </h5>
-                </div>
+    @can('karung.view_reports')
+    <div class="row">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-start border-5 border-primary shadow h-100">
                 <div class="card-body">
-                    <canvas id="salesChart"></canvas>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header bg-primary text-white">{{ __('Dashboard Modul Toko Karung') }}</div>
-                <div class="card-body">
-                    <h1>🎉 Selamat Datang di Dashboard Modul Toko Karung! 🎉</h1>
-                    <p class="lead">Ini adalah pusat kendali untuk semua fitur manajemen toko karung Anda.</p>
-                    <hr>
-                    {{-- ... (Sisa isi card menu tidak berubah) ... --}}
-                    @canany(['karung.create_purchases', 'karung.view_purchases', 'karung.create_sales', 'karung.view_sales'])
-                    <h5 class="mt-4">Menu Transaksi</h5>
-                    <div class="list-group">
-                        @canany(['karung.create_purchases', 'karung.view_purchases'])
-                        <a href="{{ route('karung.purchases.index') }}" class="list-group-item list-group-item-action fw-bold">Manajemen Pembelian</a>
-                        @endcanany
-                        @canany(['karung.create_sales', 'karung.view_sales'])
-                        <a href="{{ route('karung.sales.index') }}" class="list-group-item list-group-item-action fw-bold">Manajemen Penjualan</a>
-                        @endcanany
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Pendapatan (Hari Ini)</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">Rp {{ number_format($kpiCards['todays_revenue'] ?? 0, 0, ',', '.') }}</div>
+                        </div>
+                        <div class="col-auto"><i class="bi bi-cash-coin fs-2 text-gray-300"></i></div>
                     </div>
-                    @endcanany
-                    @can('karung.view_reports')
-                    <h5 class="mt-4">Menu Laporan</h5>
-                    <div class="list-group">
-                        <a href="{{ route('karung.reports.sales') }}" class="list-group-item list-group-item-action">Laporan Penjualan</a>
-                        <a href="{{ route('karung.reports.purchases') }}" class="list-group-item list-group-item-action">Laporan Pembelian</a>
-                        <a href="{{ route('karung.reports.stock') }}" class="list-group-item list-group-item-action">Laporan Stok</a>
-                        <a href="{{ route('karung.reports.profit_and_loss') }}" class="list-group-item list-group-item-action">Laporan Laba Rugi</a>
-                    </div>
-                    @endcan
-                    @canany(['karung.manage_products', 'karung.manage_categories', 'karung.manage_types', 'karung.manage_suppliers', 'karung.manage_customers'])
-                    <h5 class="mt-4">Menu Master Data</h5>
-                    <div class="list-group">
-                        @can('karung.manage_products')
-                        <a href="{{ route('karung.products.index') }}" class="list-group-item list-group-item-action">⭐ Manajemen Produk Utama</a>
-                        @endcan
-                        @can('karung.manage_categories')
-                        <a href="{{ route('karung.product-categories.index') }}" class="list-group-item list-group-item-action">Manajemen Kategori Produk</a>
-                        @endcan
-                        @can('karung.manage_types')
-                        <a href="{{ route('karung.product-types.index') }}" class="list-group-item list-group-item-action">Manajemen Jenis Produk</a>
-                        @endcan
-                        @can('karung.manage_suppliers')
-                        <a href="{{ route('karung.suppliers.index') }}" class="list-group-item list-group-item-action">Manajemen Supplier</a>
-                        @endcan
-                        @can('karung.manage_customers')
-                        <a href="{{ route('karung.customers.index') }}" class="list-group-item list-group-item-action">Manajemen Pelanggan</a>
-                        @endcan
-                    </div>
-                    @endcanany
                 </div>
             </div>
         </div>
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-start border-5 border-success shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Transaksi (Hari Ini)</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ $kpiCards['todays_transactions'] ?? 0 }}</div>
+                        </div>
+                        <div class="col-auto"><i class="bi bi-receipt fs-2 text-gray-300"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-start border-5 border-info shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">Produk Terjual (Hari Ini)</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ $kpiCards['todays_products_sold'] ?? 0 }} Unit</div>
+                        </div>
+                        <div class="col-auto"><i class="bi bi-box-seam fs-2 text-gray-300"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endcan
+
+    @if(isset($criticalStockProducts) && $criticalStockProducts->isNotEmpty())
+    <div class="alert alert-warning border-0 border-start border-5 border-warning shadow-sm mb-4" role="alert">
+        <div class="d-flex align-items-center">
+            <div class="fs-3 me-3"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div>
+                <h5 class="alert-heading fw-bold">Peringatan Stok Kritis!</h5>
+                <p class="mb-1">Produk berikut memiliki stok di bawah atau sama dengan level minimum. Segera lakukan pemesanan ulang.</p>
+                <ul class="mb-0 small ps-3">
+                    @foreach ($criticalStockProducts as $product)
+                        <li><strong>{{ $product->name }}</strong> - Stok saat ini: {{ $product->stock }} (Minimum: {{ $product->min_stock_level }})</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-dark text-white"><h6 class="m-0 fw-bold"><i class="bi bi-graph-up me-2"></i>Grafik Penjualan 7 Hari Terakhir</h6></div>
+                <div class="card-body">
+                    <div style="height: 320px;">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @can('karung.view_reports')
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white"><h6 class="m-0 fw-bold">5 Produk Terlaris (30 Hari)</h6></div>
+                <div class="card-body">
+                    @forelse($bestsellingProducts as $item)
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <span>{{ $loop->iteration }}. {{ $item->product->name ?? 'Produk Dihapus' }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ $item->total_sold }} unit</span>
+                        </div>
+                    @empty
+                        <p class="text-center text-muted my-4">Belum ada data penjualan.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header bg-secondary text-white"><h6 class="m-0 fw-bold">Aktivitas Terbaru</h6></div>
+                <ul class="list-group list-group-flush">
+                    @forelse($latestActivities as $activity)
+                        <li class="list-group-item small">
+                            {{ $activity->description }} oleh <strong>{{ $activity->causer->name ?? 'Sistem' }}</strong>.
+                            <div class="text-muted" style="font-size: 0.75rem;">{{ $activity->created_at->diffForHumans() }}</div>
+                        </li>
+                    @empty
+                         <li class="list-group-item text-center text-muted">Tidak ada aktivitas terbaru.</li>
+                    @endforelse
+                </ul>
+            </div>
+        </div>
+        @endcan
     </div>
 </div>
 @endsection
 
 @push('footer-scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const salesLabels = @json($salesChartLabels);
-        const salesData = @json($salesChartData);
-
-        const ctx = document.getElementById('salesChart').getContext('2d');
-
+document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('salesChart');
+    if (ctx) {
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: salesLabels,
+                labels: @json($salesChartLabels),
                 datasets: [{
                     label: 'Total Penjualan',
-                    data: salesData,
+                    data: @json($salesChartData),
                     fill: true,
-                    borderColor: 'rgb(23, 162, 184)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                    tension: 0.1
+                    borderColor: 'rgb(78, 115, 223)',
+                    backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                    tension: 0.2
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // <-- INI PERBAIKANNYA
+                maintainAspectRatio: false,
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value, index, values) {
+                            callback: function(value) {
                                 return 'Rp ' + new Intl.NumberFormat('id-ID').format(value);
                             }
                         }
                     }
                 },
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
-                         callbacks: {
+                        callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
+                                if (label) { label += ': '; }
                                 if (context.parsed.y !== null) {
                                     label += 'Rp ' + new Intl.NumberFormat('id-ID').format(context.parsed.y);
                                 }
@@ -155,6 +184,7 @@
                 }
             }
         });
-    });
+    }
+});
 </script>
 @endpush
