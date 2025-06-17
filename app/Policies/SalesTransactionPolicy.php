@@ -48,5 +48,11 @@ class SalesTransactionPolicy
         return $user->hasRole('Super Admin TMT');
     }
 
-    // ... sisa method (forceDelete) bisa dibiarkan
+    public function managePayment(User $user, SalesTransaction $salesTransaction): bool
+    {
+        // Hanya izinkan jika pengguna punya permission DAN transaksi masih 'Completed'
+        return $user->can('karung.manage_payments') && $salesTransaction->status === 'Completed';
+    }
+
+    public function forceDelete(User $user, SalesTransaction $salesTransaction): bool { return false; }
 }

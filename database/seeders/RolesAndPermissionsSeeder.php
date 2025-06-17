@@ -42,6 +42,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.edit_sales',
             'karung.delete_sales',
 
+            // [BARU] Permission untuk update pembayaran
+            'karung.manage_payments',
+
             'karung.view_reports',
         ];
 
@@ -75,6 +78,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.create_sales',
             'karung.cancel_sales',
             'karung.view_reports',
+            'karung.manage_payments', // [BARU] Berikan akses ke Admin Modul
         ]);
         $this->command->info("Permissions untuk 'Admin Modul Karung' telah ditetapkan.");
 
@@ -83,6 +87,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.access_module',
             'karung.view_sales',
             'karung.create_sales',
+            // Secara default, staff belum bisa update pembayaran.
+            // Anda bisa tambahkan 'karung.manage_payments' di sini atau via UI jika diperlukan.
         ]);
         $this->command->info("Permissions untuk 'Staff Modul Karung' telah ditetapkan.");
 

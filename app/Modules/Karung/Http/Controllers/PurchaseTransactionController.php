@@ -47,44 +47,64 @@ class PurchaseTransactionController extends Controller
         return view('karung::purchases.create', compact('suppliers', 'products'));
     }
 
-    // [MODIFIKASI] Gunakan StorePurchaseTransactionRequest
     public function store(StorePurchaseTransactionRequest $request, StockManagementService $stockService)
     {
         $this->authorize('create', PurchaseTransaction::class);
-
-        // Data yang masuk di sini sudah dijamin valid oleh StorePurchaseTransactionRequest
         $validatedData = $request->validated();
-
+        
         try {
             DB::beginTransaction();
             $supplierId = $validatedData['supplier_id'];
-            if (is_null($supplierId)) { $defaultSupplier = Supplier::where('name', 'Pembelian Umum')->first(); $supplierId = $defaultSupplier?->id; }
-            $purchaseCode = 'PB/'.date('Ymd').'/'.strtoupper(Str::random(6));
-            $purchaseData = ['business_unit_id' => 1, 'purchase_code' => $purchaseCode, 'supplier_id' => $supplierId, 'transaction_date' => $validatedData['transaction_date'], 'purchase_reference_no' => $validatedData['purchase_reference_no'], 'notes' => $validatedData['notes'], 'user_id' => auth()->id(),];
-            
-            if ($request->hasFile('attachment_path')) {
-                // Gunakan $validatedData karena sudah aman
-                $purchaseData['attachment_path'] = $validatedData['attachment_path']->store('purchase_attachments', 'public');
+            if (is_null($supplierId)) {
+                $defaultSupplier = Supplier::where('name', 'Pembelian Umum')->first();
+                $supplierId = $defaultSupplier?->id;
             }
-            
-            $purchase = PurchaseTransaction::create($purchaseData);
+
             $totalAmount = 0;
             foreach ($validatedData['details'] as $detail) {
+                $totalAmount += $detail['quantity'] * $detail['purchase_price_at_transaction'];
+            }
+
+            $amountPaid = $request->input('amount_paid', 0); // Ambil dari request
+            if ($validatedData['payment_status'] === 'Lunas') {
+                $amountPaid = $totalAmount;
+            }
+            
+            // [PERBAIKAN] Buat objek dan set properti secara manual
+            $purchase = new PurchaseTransaction();
+            $purchase->business_unit_id = 1;
+            $purchase->purchase_code = 'PB/'.date('Ymd').'/'.strtoupper(Str::random(6));
+            $purchase->supplier_id = $supplierId;
+            $purchase->transaction_date = $validatedData['transaction_date'];
+            $purchase->purchase_reference_no = $validatedData['purchase_reference_no'];
+            $purchase->notes = $validatedData['notes'];
+            $purchase->user_id = auth()->id();
+            $purchase->total_amount = $totalAmount;
+            $purchase->payment_method = $validatedData['payment_method'];
+            $purchase->payment_status = $validatedData['payment_status'];
+            $purchase->amount_paid = $amountPaid;
+
+            if ($request->hasFile('attachment_path')) {
+                $purchase->attachment_path = $validatedData['attachment_path']->store('purchase_attachments', 'public');
+            }
+            $purchase->save(); // Simpan
+            
+            foreach ($validatedData['details'] as $detail) {
                 $subTotal = $detail['quantity'] * $detail['purchase_price_at_transaction'];
-                $purchase->details()->create(['product_id' => $detail['product_id'], 'quantity' => $detail['quantity'], 'purchase_price_at_transaction' => $detail['purchase_price_at_transaction'], 'sub_total' => $subTotal,]);
-                $totalAmount += $subTotal;
+                $purchase->details()->create([
+                    'product_id' => $detail['product_id'], 'quantity' => $detail['quantity'],
+                    'purchase_price_at_transaction' => $detail['purchase_price_at_transaction'], 'sub_total' => $subTotal,
+                ]);
             }
             
             $stockService->handlePurchaseCreation($validatedData['details']);
-            
-            $purchase->total_amount = $totalAmount;
-            $purchase->save();
             DB::commit();
             activity()->log("Membuat transaksi pembelian baru dengan kode #{$purchase->purchase_code}");
             return redirect()->route('karung.purchases.index')->with('success', 'Transaksi pembelian baru berhasil disimpan!');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan transaksi pembelian: ' . $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -104,35 +124,57 @@ class PurchaseTransactionController extends Controller
         return view('karung::purchases.edit', compact('purchase', 'suppliers', 'products'));
     }
 
-    // [MODIFIKASI] Gunakan UpdatePurchaseTransactionRequest
     public function update(UpdatePurchaseTransactionRequest $request, PurchaseTransaction $purchase, StockManagementService $stockService)
     {
         $this->authorize('update', $purchase);
-
-        // Data yang masuk di sini sudah dijamin valid oleh UpdatePurchaseTransactionRequest
         $validatedData = $request->validated();
         
         try {
             DB::beginTransaction();
             $stockService->handlePurchaseUpdate($purchase, $validatedData['details']);
-            $purchaseData = ['transaction_date' => $validatedData['transaction_date'], 'supplier_id' => $validatedData['supplier_id'], 'purchase_reference_no' => $validatedData['purchase_reference_no'], 'notes' => $validatedData['notes'], 'user_id' => auth()->id(),];
-            if ($request->hasFile('attachment_path')) { if ($purchase->attachment_path) { Storage::disk('public')->delete($purchase->attachment_path); } $purchaseData['attachment_path'] = $validatedData['attachment_path']->store('purchase_attachments', 'public'); }
-            $purchase->update($purchaseData);
-            $purchase->details()->delete();
+            
             $newTotalAmount = 0;
             foreach ($validatedData['details'] as $newDetail) {
-                $subTotal = $newDetail['quantity'] * $newDetail['purchase_price_at_transaction'];
-                $purchase->details()->create(['product_id' => $newDetail['product_id'], 'quantity' => $newDetail['quantity'], 'purchase_price_at_transaction' => $newDetail['purchase_price_at_transaction'], 'sub_total' => $subTotal,]);
-                $newTotalAmount += $subTotal;
+                $newTotalAmount += $newDetail['quantity'] * $newDetail['purchase_price_at_transaction'];
             }
+
+            $amountPaid = $request->input('amount_paid', 0); // Ambil dari request
+            if ($validatedData['payment_status'] === 'Lunas') {
+                $amountPaid = $newTotalAmount;
+            }
+
+            // [PERBAIKAN] Update properti secara manual sebelum save
+            $purchase->transaction_date = $validatedData['transaction_date'];
+            $purchase->supplier_id = $validatedData['supplier_id'];
+            $purchase->purchase_reference_no = $validatedData['purchase_reference_no'];
+            $purchase->notes = $validatedData['notes'];
+            $purchase->user_id = auth()->id();
             $purchase->total_amount = $newTotalAmount;
-            $purchase->save();
+            $purchase->payment_method = $validatedData['payment_method'];
+            $purchase->payment_status = $validatedData['payment_status'];
+            $purchase->amount_paid = $amountPaid;
+            
+            if ($request->hasFile('attachment_path')) {
+                if ($purchase->attachment_path) { Storage::disk('public')->delete($purchase->attachment_path); }
+                $purchase->attachment_path = $validatedData['attachment_path']->store('purchase_attachments', 'public');
+            }
+            $purchase->save(); // Simpan perubahan
+            
+            $purchase->details()->delete();
+            foreach ($validatedData['details'] as $newDetail) {
+                $subTotal = $newDetail['quantity'] * $newDetail['purchase_price_at_transaction'];
+                $purchase->details()->create([
+                    'product_id' => $newDetail['product_id'], 'quantity' => $newDetail['quantity'],
+                    'purchase_price_at_transaction' => $newDetail['purchase_price_at_transaction'], 'sub_total' => $subTotal,
+                ]);
+            }
+            
             activity()->log("Memperbarui transaksi pembelian dengan kode #{$purchase->purchase_code}");
             DB::commit();
             return redirect()->route('karung.purchases.index')->with('success', 'Transaksi pembelian berhasil diperbarui!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui transaksi: ' . $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -200,5 +242,36 @@ class PurchaseTransactionController extends Controller
             DB::rollBack();
             return redirect()->route('karung.purchases.index')->with('error', 'Terjadi kesalahan saat menghapus transaksi: ' . $e->getMessage());
         }
+    }
+
+    public function updatePayment(Request $request, PurchaseTransaction $purchase)
+    {
+        $this->authorize('managePayment', $purchase);
+
+        $validated = $request->validate([
+            'new_payment_amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $newPayment = $validated['new_payment_amount'];
+        $currentPaid = $purchase->amount_paid;
+        $totalAmount = $purchase->total_amount;
+
+        $totalPaid = $currentPaid + $newPayment;
+
+        if ($totalPaid > $totalAmount) {
+            return redirect()->back()->with('error', 'Jumlah pembayaran melebihi sisa tagihan!');
+        }
+
+        $purchase->amount_paid = $totalPaid;
+
+        if ($totalPaid >= $totalAmount) {
+            $purchase->payment_status = 'Lunas';
+        }
+
+        $purchase->save();
+        
+        activity()->log("Memperbarui pembayaran untuk kode pembelian #{$purchase->purchase_code}");
+
+        return redirect()->back()->with('success', 'Pembayaran berhasil diperbarui!');
     }
 }

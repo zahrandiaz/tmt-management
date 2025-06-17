@@ -26,15 +26,14 @@ Route::resource('products', ProductController::class)->middleware('permission:ka
 // Rute Transaksi Pembelian
 Route::resource('purchases', PurchaseTransactionController::class)->middleware('permission:karung.access_module');
 Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])->name('purchases.cancel');
-// [BARU] Route untuk restore pembelian
 Route::post('purchases/{purchase}/restore', [PurchaseTransactionController::class, 'restore'])->name('purchases.restore');
+Route::post('purchases/{purchase}/pay', [PurchaseTransactionController::class, 'updatePayment'])->name('purchases.update_payment');
 
 // Rute Transaksi Penjualan
 Route::resource('sales', SalesTransactionController::class)->middleware('permission:karung.access_module');
 Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])->name('sales.cancel');
-// [BARU] Route untuk restore penjualan
 Route::post('sales/{sale}/restore', [SalesTransactionController::class, 'restore'])->name('sales.restore');
-
+Route::post('sales/{sale}/pay', [SalesTransactionController::class, 'updatePayment'])->name('sales.update_payment');
 
 // Rute Laporan
 Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('reports.')->group(function() {

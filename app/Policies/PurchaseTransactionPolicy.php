@@ -49,11 +49,11 @@ class PurchaseTransactionPolicy
         return $user->hasRole('Super Admin TMT');
     }
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, PurchaseTransaction $purchaseTransaction): bool
+    public function managePayment(User $user, PurchaseTransaction $purchaseTransaction): bool
     {
-        return false;
+        // Hanya izinkan jika pengguna punya permission DAN transaksi masih 'Completed'
+        return $user->can('karung.manage_payments') && $purchaseTransaction->status === 'Completed';
     }
+
+    public function forceDelete(User $user, PurchaseTransaction $purchaseTransaction): bool { return false; }
 }

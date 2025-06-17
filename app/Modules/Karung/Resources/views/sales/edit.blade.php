@@ -10,11 +10,13 @@
                 'product_id' => $detail->product_id,
                 'quantity' => $detail->quantity,
                 'price' => $detail->selling_price_at_transaction,
-                'stock' => ($detail->product->stock ?? 0) + $detail->quantity, // Stok saat ini + stok dari transaksi ini
+                'stock' => ($detail->product->stock ?? 0) + $detail->quantity,
                 'error' => ''
             ];
         })) }},
-        productsData: productsData
+        productsData: productsData,
+        payment_status: '{{ old('payment_status', $sale->payment_status) }}',
+        amount_paid: '{{ old('amount_paid', $sale->amount_paid) }}'
     })">
         <form action="{{ route('karung.sales.update', $sale->id) }}" method="POST" @submit="validateForm">
             @csrf
@@ -27,8 +29,7 @@
                             <h5 class="mb-0">Edit Transaksi Penjualan: {{ $sale->invoice_number }}</h5>
                         </div>
                         <div class="card-body">
-                             @include('karung::components.flash-message')
-                            {{-- ... (Bagian atas form tidak berubah) ... --}}
+                            @include('karung::components.flash-message')
                              <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
@@ -110,6 +111,37 @@
                                 </table>
                             </div>
                             @error('details') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
+                            
+                            {{-- [BARU] BLOK PEMBAYARAN --}}
+                            <hr class="my-4">
+                            <h5 class="mb-3">Detail Pembayaran</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="payment_method" class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('payment_method') is-invalid @enderror" id="payment_method" name="payment_method" required>
+                                        <option value="Tunai" {{ old('payment_method', $sale->payment_method) == 'Tunai' ? 'selected' : '' }}>Tunai</option>
+                                        <option value="Transfer Bank" {{ old('payment_method', $sale->payment_method) == 'Transfer Bank' ? 'selected' : '' }}>Transfer Bank</option>
+                                        <option value="Lainnya" {{ old('payment_method', $sale->payment_method) == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
+                                    </select>
+                                    @error('payment_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="payment_status" class="form-label">Status Pembayaran <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('payment_status') is-invalid @enderror" id="payment_status" name="payment_status" x-model="payment_status" required>
+                                        <option value="Lunas">Lunas</option>
+                                        <option value="Belum Lunas">Belum Lunas</option>
+                                    </select>
+                                    @error('payment_status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <template x-if="payment_status === 'Belum Lunas'">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="amount_paid" class="form-label">Jumlah Dibayar (DP)</label>
+                                        <input type="number" step="any" class="form-control @error('amount_paid') is-invalid @enderror" id="amount_paid" name="amount_paid" x-model.number="amount_paid" min="0">
+                                        @error('amount_paid')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </template>
+                            </div>
+                            {{-- AKHIR BLOK PEMBAYARAN --}}
 
                             <div class="d-flex justify-content-end mt-4">
                                 <a href="{{ url()->previous() }}" class="btn btn-outline-secondary me-2">Batal</a>
@@ -125,7 +157,6 @@
 @endsection
 
 @php
-    // [MODIFIKASI] Menambahkan 'stock' ke dalam JSON
     $productsJson = $products->map(function($product) {
         return [
             'value' => $product->id,
@@ -141,12 +172,13 @@
 
 @push('footer-scripts')
 <script>
-    // Logika Alpine.js SAMA PERSIS dengan halaman create.blade.php
     function salesForm(config) {
         return {
             items: config.initialItems.length > 0 ? config.initialItems : [{ product_id: '', quantity: 1, price: 0, stock: Infinity, error: '' }],
             productsData: config.productsData,
             tomSelectInstances: [],
+            payment_status: config.payment_status || 'Lunas',
+            amount_paid: config.amount_paid || 0,
 
             initTomSelect(element, index, initialValue) {
                 const tomSelect = new TomSelect(element, {
@@ -164,8 +196,6 @@
                 const selectedProduct = this.productsData.find(p => p.value == selectedProductId);
                 if (selectedProduct) {
                     this.items[index].price = selectedProduct.selling_price;
-                    // Untuk edit, stok yang tersedia adalah stok database saat ini
-                    // karena stok lama sudah dikembalikan oleh Alpine di atas.
                     this.items[index].stock = selectedProduct.stock;
                     this.validateStock(index);
                 } else {

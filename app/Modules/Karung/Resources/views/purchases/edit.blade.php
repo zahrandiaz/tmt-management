@@ -11,12 +11,13 @@
                 'quantity' => $detail->quantity,
                 'price' => $detail->purchase_price_at_transaction
             ];
-        })) }}
+        })) }},
+        payment_status: '{{ old('payment_status', $purchase->payment_status) }}',
+        amount_paid: '{{ old('amount_paid', $purchase->amount_paid) }}'
     })">
         <form action="{{ route('karung.purchases.update', $purchase->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
-
             <div class="row">
                 <div class="col-12">
                     <div class="card">
@@ -24,7 +25,6 @@
                             <h5 class="mb-0">Edit Transaksi Pembelian: {{ $purchase->purchase_code }}</h5>
                         </div>
                         <div class="card-body">
-                            {{-- Baris 1: Tanggal & Supplier --}}
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
@@ -45,7 +45,6 @@
                                 </div>
                             </div>
 
-                            {{-- Baris 2: No Referensi & Catatan --}}
                             <div class="row mb-4">
                                  <div class="col-md-6">
                                     <label for="purchase_reference_no" class="form-label">No. Referensi/Faktur Supplier (Opsional)</label>
@@ -111,7 +110,6 @@
                             </div>
                             @error('details') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
 
-                            {{-- Upload Struk --}}
                             <div class="mb-3 mt-3">
                                 <label for="attachment_path" class="form-label">Ganti Struk/Nota Pembelian (Opsional)</label>
                                 @if($purchase->attachment_path)
@@ -120,6 +118,37 @@
                                 <input class="form-control @error('attachment_path') is-invalid @enderror" type="file" id="attachment_path" name="attachment_path">
                                 @error('attachment_path') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
+                            
+                            {{-- [BARU] BLOK PEMBAYARAN --}}
+                            <hr class="my-4">
+                            <h5 class="mb-3">Detail Pembayaran</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="payment_method" class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('payment_method') is-invalid @enderror" id="payment_method" name="payment_method" required>
+                                        <option value="Tunai" {{ old('payment_method', $purchase->payment_method) == 'Tunai' ? 'selected' : '' }}>Tunai</option>
+                                        <option value="Transfer Bank" {{ old('payment_method', $purchase->payment_method) == 'Transfer Bank' ? 'selected' : '' }}>Transfer Bank</option>
+                                        <option value="Lainnya" {{ old('payment_method', $purchase->payment_method) == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
+                                    </select>
+                                    @error('payment_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="payment_status" class="form-label">Status Pembayaran <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('payment_status') is-invalid @enderror" id="payment_status" name="payment_status" x-model="payment_status" required>
+                                        <option value="Lunas">Lunas</option>
+                                        <option value="Belum Lunas">Belum Lunas</option>
+                                    </select>
+                                    @error('payment_status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <template x-if="payment_status === 'Belum Lunas'">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="amount_paid" class="form-label">Jumlah Dibayar (DP)</label>
+                                        <input type="number" step="any" class="form-control @error('amount_paid') is-invalid @enderror" id="amount_paid" name="amount_paid" x-model.number="amount_paid" min="0">
+                                        @error('amount_paid')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </template>
+                            </div>
+                            {{-- AKHIR BLOK PEMBAYARAN --}}
 
                             <div class="d-flex justify-content-end mt-4">
                                 <a href="{{ url()->previous() }}" class="btn btn-outline-secondary me-2">Batal</a>
@@ -153,6 +182,9 @@
         return {
             items: config.initialItems.length > 0 ? config.initialItems : [{ product_id: '', quantity: 1, price: 0 }],
             tomSelectInstances: [],
+            payment_status: config.payment_status || 'Lunas',
+            amount_paid: config.amount_paid || 0,
+
             initTomSelect(element, index, initialValue) {
                 const tomSelect = new TomSelect(element, {
                     options: productsData,
@@ -163,21 +195,25 @@
                 });
                 this.tomSelectInstances[index] = tomSelect;
             },
+
             productChanged(index, selectedProductId) {
                 this.items[index].product_id = selectedProductId;
                 const selectedProduct = productsData.find(p => p.value == selectedProductId);
                 if (selectedProduct && this.items[index].price == 0) {
                     this.items[index].price = selectedProduct.purchase_price;
                 } else if (!selectedProduct) {
-                     this.items[index].price = 0;
+                    this.items[index].price = 0;
                 }
             },
+
             addItem() { this.items.push({ product_id: '', quantity: 1, price: 0 }); },
+
             removeItem(index) {
                 if (this.tomSelectInstances[index]) { this.tomSelectInstances[index].destroy(); }
                 this.items.splice(index, 1);
                 this.tomSelectInstances.splice(index, 1);
             },
+
             get total() {
                 return this.items.reduce((sum, item) => {
                     const quantity = isNaN(item.quantity) || item.quantity < 1 ? 0 : item.quantity;
@@ -185,6 +221,7 @@
                     return sum + (quantity * price);
                 }, 0);
             },
+
             formatCurrency(value) {
                 if (isNaN(value)) return 'Rp 0';
                 return 'Rp ' + new Intl.NumberFormat('id-ID').format(value);

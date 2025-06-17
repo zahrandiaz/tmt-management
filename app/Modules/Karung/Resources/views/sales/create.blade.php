@@ -4,8 +4,8 @@
 
 @section('module-content')
 <div class="container-fluid">
-    {{-- Kita bungkus semua dalam satu komponen Alpine.js --}}
-    <div x-data="salesForm(productsData)">
+    {{-- [MODIFIKASI] Menambahkan properti pembayaran ke dalam config Alpine --}}
+    <div x-data="salesForm({ productsData: productsData, payment_status: '{{ old('payment_status', 'Lunas') }}', amount_paid: '{{ old('amount_paid', 0) }}' })">
         <form action="{{ route('karung.sales.store') }}" method="POST" @submit="validateForm">
             @csrf
             <div class="row">
@@ -15,8 +15,8 @@
                             <h5 class="mb-0">Catat Transaksi Penjualan Baru</h5>
                         </div>
                         <div class="card-body">
-                             @include('karung::components.flash-message')
-                            {{-- ... (Bagian atas form tidak berubah, jadi saya persingkat di sini) ... --}}
+                            @include('karung::components.flash-message')
+                            
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
@@ -62,7 +62,6 @@
                                                 </td>
                                                 <td>
                                                     <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="validateStock(index)" class="form-control" :class="{'is-invalid': item.error}" placeholder="Jumlah" required min="1">
-                                                    {{-- [BARU] Pesan error --}}
                                                     <template x-if="item.error">
                                                         <div class="text-danger small mt-1" x-text="item.error"></div>
                                                     </template>
@@ -96,9 +95,39 @@
                                 </table>
                             </div>
 
+                            {{-- [BARU] BLOK PEMBAYARAN --}}
+                            <hr class="my-4">
+                            <h5 class="mb-3">Detail Pembayaran</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="payment_method" class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('payment_method') is-invalid @enderror" id="payment_method" name="payment_method" required>
+                                        <option value="Tunai" {{ old('payment_method') == 'Tunai' ? 'selected' : '' }}>Tunai</option>
+                                        <option value="Transfer Bank" {{ old('payment_method') == 'Transfer Bank' ? 'selected' : '' }}>Transfer Bank</option>
+                                        <option value="Lainnya" {{ old('payment_method') == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
+                                    </select>
+                                    @error('payment_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="payment_status" class="form-label">Status Pembayaran <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('payment_status') is-invalid @enderror" id="payment_status" name="payment_status" x-model="payment_status" required>
+                                        <option value="Lunas">Lunas</option>
+                                        <option value="Belum Lunas">Belum Lunas</option>
+                                    </select>
+                                    @error('payment_status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <template x-if="payment_status === 'Belum Lunas'">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="amount_paid" class="form-label">Jumlah Dibayar (DP)</label>
+                                        <input type="number" step="any" class="form-control @error('amount_paid') is-invalid @enderror" id="amount_paid" name="amount_paid" x-model.number="amount_paid" min="0">
+                                        @error('amount_paid')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </template>
+                            </div>
+                            {{-- AKHIR BLOK PEMBAYARAN --}}
+
                             <div class="d-flex justify-content-end mt-4">
                                 <a href="{{ route('karung.sales.index') }}" class="btn btn-outline-secondary me-2">Batal</a>
-                                {{-- [MODIFIKASI] Tombol submit dinonaktifkan jika ada error --}}
                                 <button type="submit" class="btn btn-success" :disabled="items.length === 0 || items.some(item => !item.product_id || item.error)">Simpan Transaksi Penjualan</button>
                             </div>
                         </div>
@@ -111,7 +140,6 @@
 @endsection
 
 @php
-    // [MODIFIKASI] Menambahkan 'stock' ke dalam JSON
     $productsJson = $products->map(function($product) {
         return [
             'value' => $product->id,
@@ -127,14 +155,17 @@
 
 @push('footer-scripts')
 <script>
-    function salesForm(products) {
+    function salesForm(config) {
         return {
             items: [{ product_id: '', quantity: 1, price: 0, stock: Infinity, error: '' }],
             tomSelectInstances: [], 
+            // [BARU] Properti untuk data pembayaran
+            payment_status: config.payment_status || 'Lunas',
+            amount_paid: config.amount_paid || 0,
 
             initTomSelect(element, index) {
                 const tomSelect = new TomSelect(element, {
-                    options: products,
+                    options: config.productsData,
                     placeholder: '-- Pilih atau Cari Produk --',
                     maxItems: 1,
                     onChange: (value) => {
@@ -146,7 +177,7 @@
 
             productChanged(index, selectedProductId) {
                 this.items[index].product_id = selectedProductId;
-                const selectedProduct = products.find(p => p.value == selectedProductId);
+                const selectedProduct = config.productsData.find(p => p.value == selectedProductId);
                 if (selectedProduct) {
                     this.items[index].price = selectedProduct.selling_price;
                     this.items[index].stock = selectedProduct.stock;
@@ -158,7 +189,6 @@
                 }
             },
 
-            // [BARU] Fungsi validasi stok
             validateStock(index) {
                 const item = this.items[index];
                 if (item.quantity > item.stock) {
@@ -168,7 +198,6 @@
                 }
             },
             
-            // [BARU] Fungsi validasi sebelum submit
             validateForm(event) {
                 let hasError = false;
                 this.items.forEach((item, index) => {

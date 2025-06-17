@@ -23,14 +23,12 @@
                                 </a>
                             @endcan
                             @can('karung.cancel_sales')
-                                {{-- [MODIFIKASI] --}}
                                 <form action="{{ route('karung.sales.cancel', $sale->id) }}" method="POST" class="d-inline cancel-form">
                                     @csrf
                                     <button type="submit" class="btn btn-danger btn-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.647a.5.5 0 0 0-.708-.708L8 7.293z"/></svg> Batalkan</button>
                                 </form>
                             @endcan
                              @can('karung.delete_sales')
-                                {{-- [MODIFIKASI] --}}
                                 <form action="{{ route('karung.sales.destroy', $sale->id) }}" method="POST" class="d-inline delete-form">
                                     @csrf
                                     @method('DELETE')
@@ -54,6 +52,25 @@
                         <div class="col-md-6"><p><strong>Pelanggan:</strong> {{ $sale->customer?->name ?: 'Penjualan Umum' }}</p><p><strong>Dicatat Oleh:</strong> {{ $sale->user?->name ?: 'N/A' }}</p></div>
                         @if($sale->notes)<div class="col-12"><p><strong>Catatan:</strong> {{ $sale->notes }}</p></div>@endif
                     </div>
+
+                    {{-- [MODIFIKASI] Detail Pembayaran --}}
+                    <div class="row pt-3 mt-3 border-top">
+                        <h5 class="mb-3">Informasi Pembayaran</h5>
+                        <div class="col-md-4"><p class="mb-1"><strong>Status Pembayaran:</strong> 
+                            @if($sale->payment_status == 'Lunas')
+                                <span class="badge bg-primary">Lunas</span>
+                            @else
+                                <span class="badge bg-warning text-dark">Belum Lunas</span>
+                            @endif
+                        </p></div>
+                        <div class="col-md-4"><p class="mb-1"><strong>Metode Pembayaran:</strong> {{ $sale->payment_method }}</p></div>
+                        <div class="col-md-4"><p class="mb-1"><strong>Jumlah Dibayar:</strong> Rp {{ number_format($sale->amount_paid, 0, ',', '.') }}</p></div>
+                        @if($sale->payment_status == 'Belum Lunas')
+                            <div class="col-12 mt-2"><p class="mb-1 fw-bold text-danger"><strong>Sisa Tagihan:</strong> Rp {{ number_format($sale->total_amount - $sale->amount_paid, 0, ',', '.') }}</p></div>
+                        @endif
+                    </div>
+                    <hr class="mb-4">
+
                     <h5 class="mb-3">Rincian Produk yang Dijual</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
