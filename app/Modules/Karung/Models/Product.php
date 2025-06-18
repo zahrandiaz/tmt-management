@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use App\Modules\Karung\Models\SalesTransactionDetail;
 
 class Product extends Model
 {
@@ -42,6 +43,11 @@ class Product extends Model
     public function defaultSupplier()
     {
         return $this->belongsTo(Supplier::class, 'default_supplier_id');
+    }
+
+    public function salesDetails()
+    {
+        return $this->hasMany(SalesTransactionDetail::class, 'product_id');
     }
 
     public function getActivitylogOptions(): LogOptions

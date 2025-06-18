@@ -21,6 +21,7 @@ use App\Modules\Karung\Models\Supplier;
 use App\Modules\Karung\Models\SalesTransactionDetail;
 use App\Modules\Karung\Models\PurchaseTransactionDetail;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -353,5 +354,53 @@ class ReportController extends Controller
         $stockHistory = (new Collection($salesDetails->concat($purchaseDetails)))->sortBy('date');
 
         return view('karung::reports.stock_history', compact('product', 'stockHistory'));
+    }
+
+    public function customerPerformance(Request $request)
+    {
+        $sortBy = $request->input('sort_by', 'total_spent');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        // [PERBAIKAN] Mengganti 'sales' menjadi 'salesTransactions'
+        $customers = Customer::where('name', '!=', 'Pelanggan Umum')
+            ->withCount(['salesTransactions as transaction_count' => function ($query) {
+                $query->where('status', 'Completed');
+            }])
+            ->withSum(['salesTransactions as total_spent' => function ($query) {
+                $query->where('status', 'Completed');
+            }], 'total_amount')
+            ->withMax(['salesTransactions as last_purchase_date' => function ($query) {
+                $query->where('status', 'Completed');
+            }], 'transaction_date')
+            ->orderBy($sortBy, $sortOrder)
+            ->paginate(20);
+        
+        return view('karung::reports.customer_performance_report', compact('customers', 'sortBy', 'sortOrder'));
+    }
+
+    public function productPerformance(Request $request)
+    {
+        $sortBy = $request->input('sort_by', 'total_profit');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        // Kode ini sekarang akan bekerja karena relasi 'salesDetails' sudah kita tambahkan di Model Product
+        $products = Product::where('is_active', true)
+            ->withSum(['salesDetails as units_sold' => function ($query) {
+                $query->whereHas('transaction', fn($q) => $q->where('status', 'Completed'));
+            }], 'quantity')
+            ->withSum(['salesDetails as total_revenue' => function ($query) {
+                $query->whereHas('transaction', fn($q) => $q->where('status', 'Completed'));
+            }], 'sub_total')
+            ->addSelect([
+                'total_profit' => SalesTransactionDetail::query()
+                    ->select(DB::raw('SUM(quantity * (selling_price_at_transaction - purchase_price))'))
+                    ->join('karung_products as p', 'p.id', '=', 'karung_sales_transaction_details.product_id')
+                    ->whereColumn('karung_sales_transaction_details.product_id', 'karung_products.id')
+                    ->whereHas('transaction', fn($q) => $q->where('status', 'Completed'))
+            ])
+            ->orderBy($sortBy, $sortOrder)
+            ->paginate(20);
+
+        return view('karung::reports.product_performance_report', compact('products', 'sortBy', 'sortOrder'));
     }
  }
