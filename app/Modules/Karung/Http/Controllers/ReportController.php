@@ -220,95 +220,106 @@ class ReportController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        // Query untuk total penjualan pada periode
         $salesQuery = SalesTransaction::where('status', 'Completed');
         if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        $totalSales = $salesQuery->sum('total_amount');
 
-        // Query untuk total pembelian baru pada periode
-        $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
-        if ($startDate) { $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        $totalPurchases = $purchaseQuery->sum('total_amount');
+        $salesDetails = SalesTransactionDetail::whereHas('transaction', function ($q) use ($salesQuery) {
+            $q->whereIn('id', $salesQuery->pluck('id'));
+        })->with('product.category')->get();
 
-        // [PERBAIKAN] Kalkulasi untuk Total Modal Terjual (HPP/COGS)
-        $salesDetailsQuery = \App\Modules\Karung\Models\SalesTransactionDetail::whereHas('transaction', function ($query) use ($startDate, $endDate) {
-            $query->where('status', 'Completed');
-            if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-            if ($endDate) { $query->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        })->with('product');
-
-        $salesDetails = $salesDetailsQuery->get();
-
+        $totalRevenue = $salesDetails->sum('sub_total');
         $totalCost = $salesDetails->reduce(function ($carry, $detail) {
-            $cost = ($detail->product->purchase_price ?? 0) * $detail->quantity;
-            return $carry + $cost;
+            return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
         }, 0);
+        $grossProfit = $totalRevenue - $totalCost;
 
-        // Kalkulasi Laba
-        $grossProfit = $totalSales - $totalCost;
-        $netProfit = $grossProfit - $totalPurchases; // Ini adalah kalkulasi sederhana, bisa disesuaikan
-
-        // Kirim semua variabel ke view
+        // [PERBAIKAN] Menggunakan method filter() untuk memastikan kategori ada
+        $profitByCategory = $salesDetails->filter(function ($detail) {
+                return $detail->product && $detail->product->category;
+            })
+            ->groupBy('product.category.name')
+            ->map(function ($details, $categoryName) {
+                $revenue = $details->sum('sub_total');
+                $cost = $details->reduce(function ($carry, $detail) {
+                    return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
+                }, 0);
+                return ['category_name' => $categoryName, 'total_profit' => $revenue - $cost];
+            })
+            ->sortByDesc('total_profit');
+            
         return view('karung::reports.profit_loss_report', compact(
-            'totalSales', 
-            'totalPurchases', 
-            'totalCost', 
-            'grossProfit', 
-            'netProfit', 
-            'salesDetails',
-            'startDate', 
-            'endDate'
+            'totalRevenue', 'totalCost', 'grossProfit', 
+            'salesDetails', 'profitByCategory', 'startDate', 'endDate'
         ));
     }
 
     public function exportProfitLoss(Request $request)
     {
+        // [MODIFIKASI] Menyiapkan semua data untuk di-pass ke class export
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        // Lakukan kalkulasi yang sama persis seperti di method show
         $salesQuery = SalesTransaction::where('status', 'Completed');
-        $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
-        if ($startDate) {
-            $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate));
-            $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate));
-        }
-        if ($endDate) {
-            $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate));
-            $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate));
-        }
-        $totalSales = $salesQuery->sum('total_amount');
-        $totalPurchases = $purchaseQuery->sum('total_amount');
-        $profitLoss = $totalSales - $totalPurchases;
+        if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+
+        $salesDetails = SalesTransactionDetail::whereHas('transaction', function ($q) use ($salesQuery) {
+            $q->whereIn('id', $salesQuery->pluck('id'));
+        })->with(['product.category', 'transaction'])->get();
+        
+        $totalRevenue = $salesDetails->sum('sub_total');
+        $totalCost = $salesDetails->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+        $grossProfit = $totalRevenue - $totalCost;
+
+        $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
+            ->groupBy('product.category.name')
+            ->map(function ($details, $categoryName) {
+                $rev = $details->sum('sub_total');
+                $cost = $details->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+                return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
+            })->sortByDesc('total_profit');
+
+        $exportData = [
+            'totalRevenue' => $totalRevenue,
+            'totalCost' => $totalCost,
+            'grossProfit' => $grossProfit,
+            'profitByCategory' => $profitByCategory,
+            'salesDetails' => $salesDetails,
+        ];
 
         $fileName = 'Laporan_Laba_Rugi_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
-        return Excel::download(new ProfitLossReportExport($totalSales, $totalPurchases, $profitLoss), $fileName);
+        return Excel::download(new ProfitLossReportExport($exportData), $fileName);
     }
 
     public function exportProfitLossPdf(Request $request)
     {
+        // Logikanya sama persis dengan method profitAndLoss() untuk konsistensi
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        // Lakukan kalkulasi yang sama persis seperti di method show
         $salesQuery = SalesTransaction::where('status', 'Completed');
-        $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
-        if ($startDate) {
-            $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate));
-            $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate));
-        }
-        if ($endDate) {
-            $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate));
-            $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate));
-        }
-        $totalSales = $salesQuery->sum('total_amount');
-        $totalPurchases = $purchaseQuery->sum('total_amount');
-        $profitLoss = $totalSales - $totalPurchases;
+        if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
 
-        $pdf = PDF::loadView('karung::reports.pdf.profit_loss_report_pdf', compact('totalSales', 'totalPurchases', 'profitLoss', 'startDate', 'endDate'));
-        $fileName = 'Laporan_Laba_Rugi_' . Carbon::now()->format('Y-m-d') . '.pdf';
+        $salesDetails = SalesTransactionDetail::whereHas('transaction', function ($q) use ($salesQuery) {
+            $q->whereIn('id', $salesQuery->pluck('id'));
+        })->with('product.category')->get();
+        
+        $totalRevenue = $salesDetails->sum('sub_total');
+        $totalCost = $salesDetails->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+        $grossProfit = $totalRevenue - $totalCost;
+
+        $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
+            ->groupBy('product.category.name')
+            ->map(function ($details, $categoryName) {
+                $rev = $details->sum('sub_total');
+                $cost = $details->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+                return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
+            })->sortByDesc('total_profit');
+
+        $pdf = PDF::loadView('karung::reports.pdf.profit_loss_report_pdf', compact('totalRevenue', 'totalCost', 'grossProfit', 'profitByCategory', 'salesDetails', 'startDate', 'endDate'));
+        $fileName = 'Laporan_Laba_Rugi_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
 
@@ -402,5 +413,31 @@ class ReportController extends Controller
             ->paginate(20);
 
         return view('karung::reports.product_performance_report', compact('products', 'sortBy', 'sortOrder'));
+    }
+
+    public function cashFlow(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        // Total Pemasukan dari Penjualan Lunas
+        $salesQuery = SalesTransaction::where('status', 'Completed');
+        if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        $totalIncome = $salesQuery->sum('amount_paid'); // Menggunakan amount_paid untuk akurasi
+
+        // Total Pengeluaran dari Pembelian Lunas
+        $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
+        if ($startDate) { $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        $totalExpense = $purchaseQuery->sum('amount_paid'); // Menggunakan amount_paid untuk akurasi
+
+        // Arus Kas Bersih
+        $netCashFlow = $totalIncome - $totalExpense;
+
+        return view('karung::reports.cash_flow_report', compact(
+            'totalIncome', 'totalExpense', 'netCashFlow',
+            'startDate', 'endDate'
+        ));
     }
  }

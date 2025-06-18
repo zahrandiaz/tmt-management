@@ -52,4 +52,5 @@ Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('
     Route::get('/profit-loss/export-pdf', [ReportController::class, 'exportProfitLossPdf'])->name('profit_loss.export.pdf');
     Route::get('/customer-performance', [ReportController::class, 'customerPerformance'])->name('customer_performance');
     Route::get('/product-performance', [ReportController::class, 'productPerformance'])->name('product_performance');
+    Route::get('/cash-flow', [ReportController::class, 'cashFlow'])->name('cash_flow');
 });
