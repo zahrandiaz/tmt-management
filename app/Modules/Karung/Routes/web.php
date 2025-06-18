@@ -44,6 +44,7 @@ Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('
     Route::get('/purchases/export', [ReportController::class, 'exportPurchases'])->name('purchases.export');
     Route::get('/purchases/export-pdf', [ReportController::class, 'exportPurchasesPdf'])->name('purchases.export.pdf');
     Route::get('/stock', [ReportController::class, 'stockReport'])->name('stock');
+    Route::get('/stock/{product}/history', [ReportController::class, 'stockHistory'])->name('stock.history');
     Route::get('/stock/export', [ReportController::class, 'exportStock'])->name('stock.export');
     Route::get('/stock/export-pdf', [ReportController::class, 'exportStockPdf'])->name('stock.export.pdf');
     Route::get('/profit-loss', [ReportController::class, 'profitAndLoss'])->name('profit_and_loss');

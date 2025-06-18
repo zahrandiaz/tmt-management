@@ -2,84 +2,91 @@
 
 namespace App\Exports;
 
-use App\Modules\Karung\Models\PurchaseTransaction;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use App\Modules\Karung\Models\PurchaseTransactionDetail;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Carbon\Carbon;
 
-class PurchasesReportExport implements FromCollection, WithHeadings, WithMapping
+class PurchasesReportExport implements FromQuery, WithHeadings, WithMapping, WithStrictNullComparison
 {
     protected $startDate;
     protected $endDate;
+    protected $supplierId;
 
-    public function __construct($startDate, $endDate)
+    public function __construct($startDate, $endDate, $supplierId = null)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
+        $this->supplierId = $supplierId;
     }
 
     /**
-    * @return \Illuminate\Support\Collection
+    * @return \Illuminate\Database\Query\Builder
     */
-    public function collection()
+    public function query()
     {
-        $query = PurchaseTransaction::with(['supplier', 'user', 'details.product'])
-                                    ->where('status', 'Completed');
+        $query = PurchaseTransactionDetail::with(['transaction.supplier', 'transaction.user', 'product'])
+            ->whereHas('transaction', function ($q) {
+                $q->where('status', 'Completed');
 
-        if ($this->startDate) {
-            $query->whereDate('transaction_date', '>=', Carbon::parse($this->startDate));
-        }
-        if ($this->endDate) {
-            $query->whereDate('transaction_date', '<=', Carbon::parse($this->endDate));
-        }
-
-        return $query->latest('transaction_date')->get();
+                if ($this->startDate) {
+                    $q->whereDate('transaction_date', '>=', Carbon::parse($this->startDate));
+                }
+                if ($this->endDate) {
+                    $q->whereDate('transaction_date', '<=', Carbon::parse($this->endDate));
+                }
+                if ($this->supplierId) {
+                    $q->where('supplier_id', $this->supplierId);
+                }
+            });
+        
+        return $query->orderBy(
+            \App\Modules\Karung\Models\PurchaseTransaction::select('transaction_date')
+                ->whereColumn('karung_purchase_transactions.id', 'karung_purchase_transaction_details.purchase_transaction_id')
+        );
     }
 
     /**
-     * @return array
-     */
+    * @return array
+    */
     public function headings(): array
     {
         return [
-            'Tanggal Transaksi',
             'Kode Pembelian',
             'No. Referensi',
+            'Tanggal Transaksi',
             'Supplier',
             'Dicatat Oleh',
-            'Produk',
-            'Jumlah',
+            'Metode Pembayaran',
+            'Status Pembayaran',
+            'SKU Produk',
+            'Nama Produk',
+            'Kuantitas',
             'Harga Beli Satuan',
             'Subtotal',
-            'Total Transaksi',
         ];
     }
 
     /**
-     * @var PurchaseTransaction $purchase
-     */
-    public function map($purchase): array
+    * @param PurchaseTransactionDetail $detail
+    */
+    public function map($detail): array
     {
-        $rows = [];
-        $isFirstRow = true;
-
-        foreach ($purchase->details as $detail) {
-            $rows[] = [
-                'Tanggal Transaksi' => $isFirstRow ? $purchase->transaction_date->format('d-m-Y H:i') : '',
-                'Kode Pembelian'    => $isFirstRow ? $purchase->purchase_code : '',
-                'No. Referensi'     => $isFirstRow ? $purchase->purchase_reference_no : '',
-                'Supplier'          => $isFirstRow ? ($purchase->supplier->name ?? 'Pembelian Umum') : '',
-                'Dicatat Oleh'      => $isFirstRow ? ($purchase->user->name ?? 'N/A') : '',
-                'Produk'            => $detail->product->name ?? 'Produk Dihapus',
-                'Jumlah'            => $detail->quantity,
-                'Harga Beli Satuan' => $detail->purchase_price_at_transaction,
-                'Subtotal'          => $detail->sub_total,
-                'Total Transaksi'   => $isFirstRow ? $purchase->total_amount : '',
-            ];
-            $isFirstRow = false;
-        }
-
-        return $rows;
+        return [
+            $detail->transaction->purchase_code,
+            $detail->transaction->purchase_reference_no,
+            $detail->transaction->transaction_date->format('Y-m-d H:i:s'),
+            $detail->transaction->supplier->name ?? 'Pembelian Umum',
+            $detail->transaction->user->name ?? 'N/A',
+            $detail->transaction->payment_method,
+            $detail->transaction->payment_status,
+            $detail->product->sku ?? 'N/A',
+            $detail->product->name ?? 'Produk Dihapus',
+            $detail->quantity,
+            $detail->purchase_price_at_transaction,
+            $detail->sub_total,
+        ];
     }
 }

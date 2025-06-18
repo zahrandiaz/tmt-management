@@ -17,6 +17,10 @@ use Barryvdh\DomPDF\Facade\Pdf; // <-- [BARU] Import facade PDF
 use App\Models\User;
 use App\Modules\Karung\Models\Customer;
 use App\Modules\Karung\Models\ProductCategory;
+use App\Modules\Karung\Models\Supplier;
+use App\Modules\Karung\Models\SalesTransactionDetail;
+use App\Modules\Karung\Models\PurchaseTransactionDetail;
+use Illuminate\Support\Collection;
 
 class ReportController extends Controller
 {
@@ -111,13 +115,13 @@ class ReportController extends Controller
 
     public function purchases(Request $request)
     {
+        // Logika tidak berubah, sudah mengambil semua data yang dibutuhkan
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        // [BARU] Ambil input dari filter supplier
         $selectedSupplierId = $request->input('supplier_id');
 
         $query = PurchaseTransaction::with(['supplier', 'user', 'details.product'])
-                                    ->where('status', 'Completed');
+                                       ->where('status', 'Completed');
 
         if ($startDate) {
             $query->whereDate('transaction_date', '>=', Carbon::parse($startDate));
@@ -125,7 +129,6 @@ class ReportController extends Controller
         if ($endDate) {
             $query->whereDate('transaction_date', '<=', Carbon::parse($endDate));
         }
-        // [BARU] Terapkan filter jika supplier dipilih
         if ($selectedSupplierId) {
             $query->where('supplier_id', $selectedSupplierId);
         }
@@ -133,19 +136,13 @@ class ReportController extends Controller
         $totalTransactions = $query->clone()->count();
         $totalSpending = $query->clone()->sum('total_amount');
 
-        $purchases = $query->latest('transaction_date')->paginate(20);
+        $purchases = $query->latest('transaction_date')->paginate(10); // Dibuat 10 agar konsisten
 
-        // [BARU] Ambil daftar supplier untuk dropdown
-        $suppliers = \App\Modules\Karung\Models\Supplier::orderBy('name')->get();
+        $suppliers = Supplier::orderBy('name')->get();
 
         return view('karung::reports.purchases_report', compact(
-            'purchases', 
-            'totalSpending', 
-            'totalTransactions', 
-            'startDate', 
-            'endDate', 
-            'suppliers', // <-- Kirim data supplier ke view
-            'selectedSupplierId' // <-- Kirim ID supplier yang dipilih
+            'purchases', 'totalSpending', 'totalTransactions', 'startDate', 
+            'endDate', 'suppliers', 'selectedSupplierId'
         ));
     }
 
@@ -153,22 +150,29 @@ class ReportController extends Controller
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $fileName = 'Laporan_Pembelian_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
-        return Excel::download(new PurchasesReportExport($startDate, $endDate), $fileName);
+        $supplierId = $request->input('supplier_id'); // [BARU] Ambil filter supplier
+        
+        $fileName = 'Laporan_Pembelian_Detail_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
+        return Excel::download(new PurchasesReportExport($startDate, $endDate, $supplierId), $fileName);
     }
 
     public function exportPurchasesPdf(Request $request)
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $query = PurchaseTransaction::with(['supplier', 'user'])->where('status', 'Completed');
+        $supplierId = $request->input('supplier_id'); // [BARU] Ambil filter supplier
+
+        $query = PurchaseTransaction::with(['supplier', 'user', 'details.product'])->where('status', 'Completed');
+
         if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $query->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        if ($supplierId) { $query->where('supplier_id', $supplierId); }
+
         $purchases = $query->latest('transaction_date')->get();
         $totalPembelian = $query->sum('total_amount');
 
         $pdf = PDF::loadView('karung::reports.pdf.purchases_report_pdf', compact('purchases', 'totalPembelian', 'startDate', 'endDate'));
-        $fileName = 'Laporan_Pembelian_' . Carbon::now()->format('Y-m-d') . '.pdf';
+        $fileName = 'Laporan_Pembelian_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
 
@@ -307,4 +311,47 @@ class ReportController extends Controller
         return $pdf->download($fileName);
     }
 
+    public function stockHistory(Request $request, Product $product)
+    {
+        // Ambil semua detail penjualan untuk produk ini
+        $salesDetails = SalesTransactionDetail::with('transaction')
+            ->where('product_id', $product->id)
+            ->whereHas('transaction', function ($q) {
+                $q->where('status', 'Completed');
+            })
+            ->get()
+            ->map(function ($detail) {
+                return (object) [
+                    'date' => $detail->transaction->transaction_date,
+                    'type' => 'Penjualan',
+                    'reference' => $detail->transaction->invoice_number,
+                    'url' => route('karung.sales.show', $detail->transaction->id),
+                    'quantity_in' => 0,
+                    'quantity_out' => $detail->quantity,
+                ];
+            });
+
+        // Ambil semua detail pembelian untuk produk ini
+        $purchaseDetails = PurchaseTransactionDetail::with('transaction')
+            ->where('product_id', $product->id)
+            ->whereHas('transaction', function ($q) {
+                $q->where('status', 'Completed');
+            })
+            ->get()
+            ->map(function ($detail) {
+                return (object) [
+                    'date' => $detail->transaction->transaction_date,
+                    'type' => 'Pembelian',
+                    'reference' => $detail->transaction->purchase_code,
+                    'url' => route('karung.purchases.show', $detail->transaction->id),
+                    'quantity_in' => $detail->quantity,
+                    'quantity_out' => 0,
+                ];
+            });
+
+        // Gabungkan kedua koleksi dan urutkan berdasarkan tanggal
+        $stockHistory = (new Collection($salesDetails->concat($purchaseDetails)))->sortBy('date');
+
+        return view('karung::reports.stock_history', compact('product', 'stockHistory'));
+    }
  }
