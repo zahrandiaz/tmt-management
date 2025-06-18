@@ -9,10 +9,7 @@
             <div class="card">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Laporan Laba Rugi</h5>
-                    <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">...</svg>
-                        Kembali ke Dashboard
-                    </a>
+                    <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">Kembali ke Dashboard</a>
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ route('karung.reports.profit_and_loss') }}" class="mb-4">
@@ -38,25 +35,29 @@
                     </div>
                     <hr>
 
-                    <h5 class="mb-3">Ringkasan Laporan</h5>
+                    <h5 class="mb-3">Ringkasan Laporan untuk Periode {{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d F Y') : 'Awal' }} s/d {{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d F Y') : 'Akhir' }}</h5>
                     
                     <div class="row align-items-center mb-4">
                         <div class="col-md-4">
-                            <div style="height: 250px;">
-                                <canvas id="profitChart"></canvas>
-                            </div>
+                            <div style="height: 250px;"><canvas id="profitChart"></canvas></div>
                         </div>
+                        {{-- [MODIFIKASI] Menambahkan Biaya Operasional dan Laba Bersih --}}
                         <div class="col-md-8">
-                            <div class="card text-white bg-success mb-2">
-                                <div class="card-body p-3"><h6 class="card-title mb-0">Total Pendapatan (Omzet)</h6><p class="card-text fs-5 fw-bold mb-0">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p></div>
-                            </div>
-                            {{-- [PERBAIKAN] Mengubah warna kartu modal menjadi merah --}}
-                             <div class="card text-white bg-danger mb-2">
-                                <div class="card-body p-3"><h6 class="card-title mb-0">Total Modal Terjual (HPP)</h6><p class="card-text fs-5 fw-bold mb-0">Rp {{ number_format($totalCost, 0, ',', '.') }}</p></div>
-                            </div>
-                             <div class="card text-white bg-primary">
-                                <div class="card-body p-3"><h6 class="card-title mb-0">LABA KOTOR</h6><p class="card-text fs-5 fw-bold mb-0">Rp {{ number_format($grossProfit, 0, ',', '.') }}</p></div>
-                            </div>
+                            <div class="card border-success border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(+) Total Pendapatan (Omzet)</span> <span class="fw-bold fs-5">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span></div>
+                            </div></div>
+                            <div class="card border-secondary border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(-) Total Modal Terjual (HPP)</span> <span class="fw-bold fs-5">Rp {{ number_format($totalCost, 0, ',', '.') }}</span></div>
+                            </div></div>
+                            <div class="card bg-light border-secondary border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(=) Laba Kotor</span> <span class="fw-bold fs-5">Rp {{ number_format($grossProfit, 0, ',', '.') }}</span></div>
+                            </div></div>
+                             <div class="card border-danger border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(-) Total Biaya Operasional</span> <span class="fw-bold fs-5">Rp {{ number_format($totalExpenses, 0, ',', '.') }}</span></div>
+                            </div></div>
+                            <div class="card text-white {{ $netProfit >= 0 ? 'bg-primary' : 'bg-danger' }}"><div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center"><h6 class="card-title mb-0">(=) LABA BERSIH</h6><p class="card-text fs-4 fw-bold mb-0">Rp {{ number_format($netProfit, 0, ',', '.') }}</p></div>
+                            </div></div>
                         </div>
                     </div>
                     <hr>

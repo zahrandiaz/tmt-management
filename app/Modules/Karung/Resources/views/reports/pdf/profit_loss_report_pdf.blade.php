@@ -19,23 +19,16 @@
     </style>
 </head>
 <body>
-    <h1>Laporan Laba Rugi</h1>
-    <p style="text-align:center; margin-top:0;">Periode: {{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d M Y') : 'Awal' }} - {{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d M Y') : 'Akhir' }}</p>
+    <h1>Laporan Laba Bersih</h1>
+    <p style="text-align:center; margin-top:0;">Periode: {{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d M Y') : 'Semua' }} - {{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d M Y') : 'Semua' }}</p>
     
-    <h3>Ringkasan Laporan</h3>
+    <h3>Ringkasan Keuangan</h3>
     <table class="table">
-        <tr>
-            <th style="width: 70%;">Total Pendapatan (Omzet)</th>
-            <td class="text-end fw-bold">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</td>
-        </tr>
-        <tr>
-            <th>Total Modal Terjual (HPP)</th>
-            <td class="text-end fw-bold">Rp {{ number_format($totalCost, 0, ',', '.') }}</td>
-        </tr>
-        <tr class="sub-header">
-            <th>LABA KOTOR</th>
-            <th class="text-end">Rp {{ number_format($grossProfit, 0, ',', '.') }}</th>
-        </tr>
+        <tr><th style="width: 70%;">Total Pendapatan (Omzet)</th><td class="text-end fw-bold">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</td></tr>
+        <tr><th>(-) Total Modal Terjual (HPP)</th><td class="text-end fw-bold">Rp {{ number_format($totalCost, 0, ',', '.') }}</td></tr>
+        <tr class="sub-header"><th>(=) Laba Kotor</th><th class="text-end">Rp {{ number_format($grossProfit, 0, ',', '.') }}</th></tr>
+        <tr><th>(-) Total Biaya Operasional</th><td class="text-end fw-bold">Rp {{ number_format($totalExpenses, 0, ',', '.') }}</td></tr>
+        <tr class="sub-header"><th>(=) Laba Bersih</th><th class="text-end">Rp {{ number_format($netProfit, 0, ',', '.') }}</th></tr>
     </table>
 
     <h3>Ringkasan Laba per Kategori Produk</h3>
@@ -54,6 +47,25 @@
                 </tr>
             @empty
                 <tr><td colspan="2" class="text-center">Tidak ada data laba per kategori.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <h3>Rincian Biaya Operasional</h3>
+    <table class="table">
+        <thead>
+            <tr><th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th class="text-end">Jumlah</th></tr>
+        </thead>
+        <tbody>
+            @forelse ($expensesDetails as $expense)
+                <tr>
+                    <td>{{ $expense->date->format('d-m-Y') }}</td>
+                    <td>{{ $expense->category }}</td>
+                    <td>{{ $expense->description }}</td>
+                    <td class="text-end">Rp {{ number_format($expense->amount, 0, ',', '.') }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="4" class="text-center">Tidak ada data biaya operasional.</td></tr>
             @endforelse
         </tbody>
     </table>

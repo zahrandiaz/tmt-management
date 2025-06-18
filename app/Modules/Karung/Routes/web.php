@@ -23,6 +23,10 @@ Route::get('customers/{customer}/history', [CustomerController::class, 'history'
 Route::resource('customers', CustomerController::class)->middleware('permission:karung.manage_customers');
 Route::resource('products', ProductController::class)->middleware('permission:karung.manage_products');
 
+// [BARU] Rute untuk Biaya Operasional
+Route::resource('operational-expenses', \App\Modules\Karung\Http\Controllers\OperationalExpenseController::class)
+    ->middleware('permission:karung.manage_expenses');
+
 // Rute Transaksi Pembelian
 Route::resource('purchases', PurchaseTransactionController::class)->middleware('permission:karung.access_module');
 Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])->name('purchases.cancel');

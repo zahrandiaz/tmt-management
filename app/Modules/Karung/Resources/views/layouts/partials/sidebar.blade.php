@@ -31,26 +31,36 @@
         </li>
         @endcanany
 
-        @can('karung.view_reports')
+        {{-- [MODIFIKASI] Grup Menu Keuangan & Laporan --}}
+        @canany(['karung.view_reports', 'karung.manage_expenses'])
          <li>
-            <a href="#report-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->routeIs('karung.reports.*') ? '' : 'collapsed' }}">
-                <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#table"/></svg>
-                Laporan
+            <a href="#finance-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*reports*') || request()->is('*operational-expenses*') ? '' : 'collapsed' }}">
+                <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#cash-coin"/></svg>
+                Keuangan
             </a>
-            <div class="collapse {{ request()->routeIs('karung.reports.*') ? 'show' : '' }}" id="report-submenu">
+            <div class="collapse {{ request()->is('*reports*') || request()->is('*operational-expenses*') ? 'show' : '' }}" id="finance-submenu">
                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
-                    <li><a href="{{ route('karung.reports.sales') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.sales') ? 'active' : '' }}">Penjualan</a></li>
-                    <li><a href="{{ route('karung.reports.purchases') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.purchases') ? 'active' : '' }}">Pembelian</a></li>
-                    <li><a href="{{ route('karung.reports.stock') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.stock') ? 'active' : '' }}">Stok</a></li>
-                    <li><a href="{{ route('karung.reports.profit_and_loss') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.profit_and_loss') ? 'active' : '' }}">Laba Rugi</a></li>
-                    <li><a href="{{ route('karung.reports.cash_flow') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.cash_flow') ? 'active' : '' }}">Arus Kas</a></li>
+                    @can('karung.manage_expenses')
+                    <li><a href="{{ route('karung.operational-expenses.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.operational-expenses.*') ? 'active' : '' }}">Biaya Operasional</a></li>
+                    @endcan
+                    @can('karung.view_reports')
+                    <li><hr class="dropdown-divider bg-light"></li>
+                    <li><a href="{{ route('karung.reports.sales') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.sales') ? 'active' : '' }}">Laporan Penjualan</a></li>
+                    <li><a href="{{ route('karung.reports.purchases') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.purchases') ? 'active' : '' }}">Laporan Pembelian</a></li>
+                    
+                    {{-- [PERBAIKAN] Logika '||' dihapus dari href dan hanya diletakkan di class --}}
+                    <li><a href="{{ route('karung.reports.stock') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.stock*') ? 'active' : '' }}">Laporan Stok</a></li>
+                    
+                    <li><a href="{{ route('karung.reports.profit_and_loss') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.profit_and_loss') ? 'active' : '' }}">Laporan Laba Rugi</a></li>
+                    <li><a href="{{ route('karung.reports.cash_flow') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.cash_flow') ? 'active' : '' }}">Laporan Arus Kas</a></li>
                     <li><hr class="dropdown-divider bg-light"></li>
                     <li><a href="{{ route('karung.reports.customer_performance') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.customer_performance') ? 'active' : '' }}">Performa Pelanggan</a></li>
                     <li><a href="{{ route('karung.reports.product_performance') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.reports.product_performance') ? 'active' : '' }}">Performa Produk</a></li>
+                    @endcan
                 </ul>
             </div>
         </li>
-        @endcan
+        @endcanany
         
         @canany(['karung.manage_products', 'karung.manage_categories', 'karung.manage_types', 'karung.manage_suppliers', 'karung.manage_customers'])
         <li>
@@ -59,7 +69,7 @@
                 Master Data
             </a>
             <div class="collapse {{ request()->is('*product-categories*','*product-types*','*suppliers*','*customers*','*products*') ? 'show' : '' }}" id="masterdata-submenu">
-                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
+                <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
                     @can('karung.manage_products')
                     <li><a href="{{ route('karung.products.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.products.*') ? 'active' : '' }}">Produk</a></li>
                     @endcan
@@ -81,7 +91,7 @@
         @endcanany
     </ul>
     <hr>
-    <div class="dropdown mt-auto"> {{-- mt-auto agar dropdown menempel di bawah --}}
+    <div class="dropdown mt-auto">
         <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
             <img src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle me-2">
             <strong>{{ Auth::user()->name }}</strong>

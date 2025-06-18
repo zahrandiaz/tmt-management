@@ -7,7 +7,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class ProfitLossReportExport implements FromArray, WithHeadings, ShouldAutoSize, WithTitle
+class ProfitLossReportExport implements FromArray, ShouldAutoSize, WithTitle
 {
     protected $data;
 
@@ -21,14 +21,6 @@ class ProfitLossReportExport implements FromArray, WithHeadings, ShouldAutoSize,
         return 'Laporan Laba Rugi';
     }
 
-    public function headings(): array
-    {
-        // Header untuk bagian paling detail (rincian item)
-        return [
-            'Tipe', 'Keterangan', 'Nilai'
-        ];
-    }
-
     /**
     * @return array
     */
@@ -37,22 +29,24 @@ class ProfitLossReportExport implements FromArray, WithHeadings, ShouldAutoSize,
         $rows = [];
 
         // Bagian Ringkasan Utama
-        $rows[] = ['RINGKASAN UTAMA', '', ''];
-        $rows[] = ['', 'Total Pendapatan (Omzet)', $this->data['totalRevenue']];
-        $rows[] = ['', 'Total Modal (HPP)', $this->data['totalCost']];
-        $rows[] = ['', 'Laba Kotor', $this->data['grossProfit']];
-        $rows[] = ['', '', '']; // Spasi
+        $rows[] = ['RINGKASAN UTAMA', ''];
+        $rows[] = ['Total Pendapatan (Omzet)', $this->data['totalRevenue']];
+        $rows[] = ['Total Modal (HPP)', $this->data['totalCost']];
+        $rows[] = ['Laba Kotor', $this->data['grossProfit']];
+        $rows[] = ['Total Biaya Operasional', $this->data['totalExpenses']];
+        $rows[] = ['LABA BERSIH', $this->data['netProfit']];
+        $rows[] = ['']; // Spasi
 
         // Bagian Laba per Kategori
-        $rows[] = ['LABA PER KATEGORI', '', ''];
+        $rows[] = ['LABA PER KATEGORI', ''];
         foreach ($this->data['profitByCategory'] as $item) {
-            $rows[] = ['', $item['category_name'], $item['total_profit']];
+            $rows[] = [$item['category_name'], $item['total_profit']];
         }
-        $rows[] = ['', '', '']; // Spasi
+        $rows[] = ['']; // Spasi
 
         // Bagian Rincian per Item
-        $rows[] = ['RINCIAN LABA PER ITEM TERJUAL', '', ''];
-        $rows[] = ['Tanggal', 'Invoice', 'Produk', 'Qty', 'H. Jual', 'H. Modal', 'Subtotal Laba']; // Sub-header
+        $rows[] = ['RINCIAN LABA PER ITEM TERJUAL', '', '', '', '', '', ''];
+        $rows[] = ['Tanggal', 'Invoice', 'Produk', 'Qty', 'H. Jual', 'H. Modal', 'Subtotal Laba'];
         
         foreach ($this->data['salesDetails'] as $detail) {
             $purchasePrice = $detail->product?->purchase_price ?? 0;
