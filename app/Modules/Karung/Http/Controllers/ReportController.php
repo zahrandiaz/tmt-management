@@ -43,17 +43,27 @@ class ReportController extends Controller
             $query->where('user_id', $selectedUserId);
         }
 
-        // Simpan total sebelum paginasi
-        $totalTransactions = $query->count();
-        $totalRevenue = $query->sum('total_amount');
+        $queryForTotals = clone $query;
 
-        $sales = $query->latest('transaction_date')->paginate(20);
+        $totalTransactions = $queryForTotals->count();
+        $totalRevenue = $queryForTotals->sum('total_amount');
+
+        $allSalesDetails = $queryForTotals->with('details.product')->get()->pluck('details')->flatten();
+        $totalCost = $allSalesDetails->reduce(function ($carry, $detail) {
+            return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
+        }, 0);
+        $grossProfit = $totalRevenue - $totalCost;
+
+        $sales = $query->latest('transaction_date')->paginate(10);
         
-        // Ambil data untuk dropdown filter
         $customers = Customer::orderBy('name')->get();
         $users = User::role(['Super Admin TMT', 'Admin Modul Karung', 'Staff Modul Karung'])->orderBy('name')->get();
         
-        return view('karung::reports.sales_report', compact('sales', 'totalRevenue', 'totalTransactions', 'startDate', 'endDate', 'customers', 'users', 'selectedCustomerId', 'selectedUserId'));
+        return view('karung::reports.sales_report', compact(
+            'sales', 'totalRevenue', 'totalTransactions', 'startDate', 'endDate', 
+            'customers', 'users', 'selectedCustomerId', 'selectedUserId',
+            'totalCost', 'grossProfit'
+        ));
     }
 
     public function exportSales(Request $request)
@@ -63,7 +73,7 @@ class ReportController extends Controller
         $customerId = $request->input('customer_id');
         $userId = $request->input('user_id');
         
-        $fileName = 'Laporan_Penjualan_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
+        $fileName = 'Laporan_Penjualan_Detail_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
 
         return Excel::download(new SalesReportExport($startDate, $endDate, $customerId, $userId), $fileName);
     }
@@ -78,18 +88,23 @@ class ReportController extends Controller
         $customerId = $request->input('customer_id');
         $userId = $request->input('user_id');
 
-        $query = SalesTransaction::with(['customer', 'user'])->where('status', 'Completed');
+        $query = SalesTransaction::with(['customer', 'user', 'details.product'])->where('status', 'Completed');
 
         if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $query->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         if ($customerId) { $query->where('customer_id', $customerId); }
         if ($userId) { $query->where('user_id', $userId); }
 
-        $sales = $query->latest('transaction_date')->get(); 
-        $totalOmzet = $query->sum('total_amount'); // Nama variabel ini digunakan di PDF view
+        $sales = $query->latest('transaction_date')->get();
         
-        $pdf = PDF::loadView('karung::reports.pdf.sales_report_pdf', compact('sales', 'totalOmzet', 'startDate', 'endDate'));
-        $fileName = 'Laporan_Penjualan_' . Carbon::now()->format('Y-m-d') . '.pdf';
+        $totalRevenue = $sales->sum('total_amount');
+        $totalCost = $sales->pluck('details')->flatten()->reduce(function ($carry, $detail) {
+            return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
+        }, 0);
+        $grossProfit = $totalRevenue - $totalCost;
+        
+        $pdf = PDF::loadView('karung::reports.pdf.sales_report_pdf', compact('sales', 'totalRevenue', 'totalCost', 'grossProfit', 'startDate', 'endDate'));
+        $fileName = 'Laporan_Penjualan_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
 

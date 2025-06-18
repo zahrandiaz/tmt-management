@@ -3,16 +3,14 @@
 @section('title', 'Laporan Penjualan - Modul Toko Karung')
 
 @section('module-content')
-<div class="container-fluid">
+<div class="container-fluid" x-data="{ openRow: null }">
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Laporan Penjualan</h5>
                     <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">
-                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/></svg>
                         Kembali ke Dashboard
                     </a>
                 </div>
@@ -71,24 +69,19 @@
                     
                     <hr>
 
-                    {{-- [PERBAIKAN] Menambahkan kembali kotak ringkasan --}}
                     <h5 class="mb-3">Ringkasan Laporan</h5>
                     <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card text-white bg-success">
-                                <div class="card-body">
-                                    <h6 class="card-title">Total Pendapatan (Omzet)</h6>
-                                    <p class="card-text fs-4 fw-bold">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p>
-                                </div>
-                            </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-white bg-primary"><div class="card-body"><h6 class="card-title">Jumlah Transaksi</h6><p class="card-text fs-4 fw-bold">{{ $totalTransactions }}</p></div></div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card text-white bg-primary">
-                                <div class="card-body">
-                                    <h6 class="card-title">Jumlah Transaksi</h6>
-                                    <p class="card-text fs-4 fw-bold">{{ $totalTransactions }} Transaksi</p>
-                                </div>
-                            </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-white bg-danger"><div class="card-body"><h6 class="card-title">Total Modal (HPP)</h6><p class="card-text fs-4 fw-bold">Rp {{ number_format($totalCost, 0, ',', '.') }}</p></div></div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-white bg-warning text-dark"><div class="card-body"><h6 class="card-title">Total Laba Kotor</h6><p class="card-text fs-4 fw-bold">Rp {{ number_format($grossProfit, 0, ',', '.') }}</p></div></div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-white bg-success"><div class="card-body"><h6 class="card-title">Total Pendapatan</h6><p class="card-text fs-4 fw-bold">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p></div></div>
                         </div>
                     </div>
 
@@ -96,35 +89,82 @@
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="table-dark">
+                                {{-- [MODIFIKASI] Header Tabel Baru dengan Penomoran --}}
                                 <tr>
+                                    <th scope="col" style="width: 1%;"></th>
+                                    <th scope="col" style="width: 1%;">#</th>
+                                    <th scope="col">Invoice</th>
                                     <th scope="col">Tanggal</th>
-                                    <th scope="col">No. Invoice</th>
                                     <th scope="col">Pelanggan</th>
-                                    <th scope="col">Kasir</th>
-                                    <th scope="col">Rincian Produk</th>
-                                    <th scope="col" class="text-end">Total Transaksi</th>
+                                    <th scope="col" class="text-end">Total Modal</th>
+                                    <th scope="col" class="text-end">Total Laba</th>
+                                    <th scope="col" class="text-end">Total Penjualan</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($sales as $sale)
-                                    <tr>
-                                        <td>{{ $sale->transaction_date->format('d-m-Y H:i') }}</td>
-                                        <td><a href="{{ route('karung.sales.show', $sale->id) }}">{{ $sale->invoice_number }}</a></td>
-                                        <td>{{ $sale->customer->name ?? 'Penjualan Umum' }}</td>
-                                        <td>{{ $sale->user->name ?? 'N/A' }}</td>
+                                    @php
+                                        // Kalkulasi per baris
+                                        $totalModal = $sale->details->reduce(function ($carry, $detail) {
+                                            return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
+                                        }, 0);
+                                        $totalLaba = $sale->total_amount - $totalModal;
+                                    @endphp
+                                    {{-- Baris Master --}}
+                                    <tr class="align-middle">
                                         <td>
-                                            <ul class="list-unstyled mb-0">
-                                                @foreach($sale->details as $detail)
-                                                    <li>{{ $detail->quantity }}x {{ $detail->product->name ?? 'Produk Dihapus' }}</li>
-                                                @endforeach
-                                            </ul>
+                                            <button @click="openRow = (openRow === {{ $sale->id }}) ? null : {{ $sale->id }}" class="btn btn-sm btn-outline-secondary">
+                                                <svg x-show="openRow !== {{ $sale->id }}" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/></svg>
+                                                <svg x-show="openRow === {{ $sale->id }}" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-lg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"/></svg>
+                                            </button>
                                         </td>
-                                        <td class="text-end">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</td>
+                                        {{-- [MODIFIKASI] Kolom Nomor --}}
+                                        <td>{{ $loop->iteration + $sales->firstItem() - 1 }}</td>
+                                        <td><a href="{{ route('karung.sales.show', $sale->id) }}">{{ $sale->invoice_number }}</a></td>
+                                        <td>{{ $sale->transaction_date->format('d-m-Y H:i') }}</td>
+                                        <td>{{ $sale->customer->name ?? 'Penjualan Umum' }}</td>
+                                        <td class="text-end">Rp {{ number_format($totalModal, 0, ',', '.') }}</td>
+                                        <td class="text-end fw-bold {{ $totalLaba >= 0 ? 'text-success' : 'text-danger' }}">Rp {{ number_format($totalLaba, 0, ',', '.') }}</td>
+                                        <td class="text-end fw-bold">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</td>
+                                    </tr>
+                                    {{-- Baris Detail (Collapsible) --}}
+                                    <tr x-show="openRow === {{ $sale->id }}" style="display: none;" x-collapse>
+                                        {{-- [MODIFIKASI] Tambahkan colspan menjadi 8 --}}
+                                        <td colspan="8" class="p-0">
+                                            <div class="p-3 bg-light">
+                                                <h6 class="ms-2">Rincian Produk:</h6>
+                                                <table class="table table-sm table-bordered mb-0">
+                                                    <thead class="table-secondary">
+                                                        <tr>
+                                                            <th>Nama Produk</th>
+                                                            <th class="text-center">Kuantitas</th>
+                                                            <th class="text-end">Harga Modal/Pcs</th>
+                                                            <th class="text-end">Harga Jual/Pcs</th>
+                                                            <th class="text-end">Subtotal Laba</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($sale->details as $detail)
+                                                        @php
+                                                            $modalPerPcs = $detail->product->purchase_price ?? 0;
+                                                            $subLaba = ($detail->selling_price_at_transaction - $modalPerPcs) * $detail->quantity;
+                                                        @endphp
+                                                        <tr>
+                                                            <td>{{ $detail->product->name ?? 'Produk Dihapus' }}</td>
+                                                            <td class="text-center">{{ $detail->quantity }}</td>
+                                                            <td class="text-end">Rp {{ number_format($modalPerPcs, 0, ',', '.') }}</td>
+                                                            <td class="text-end">Rp {{ number_format($detail->selling_price_at_transaction, 0, ',', '.') }}</td>
+                                                            <td class="text-end fw-bold {{ $subLaba >= 0 ? 'text-success' : 'text-danger' }}">Rp {{ number_format($subLaba, 0, ',', '.') }}</td>
+                                                        </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">Tidak ada data penjualan untuk periode ini.</td>
-                                    </tr>
+                                    {{-- [MODIFIKASI] Tambahkan colspan menjadi 8 --}}
+                                    <tr><td colspan="8" class="text-center">Tidak ada data penjualan untuk periode ini.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
