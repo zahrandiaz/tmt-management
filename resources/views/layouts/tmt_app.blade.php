@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+{{-- [PERBAIKAN] Tambahkan class d-flex flex-column untuk struktur dasar yang benar --}}
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-100 d-flex flex-column">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,17 +9,12 @@
 
     <link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-
-    {{-- CSS untuk Tom Select --}}
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 
-    {{-- CSS Khusus & Print --}}
     <style>
-        html, body { height: 100%; }
-        #tmt_app { display: flex; flex-direction: column; height: 100%; }
-        main { flex-grow: 1; display: flex; } 
+        /* [PERBAIKAN] Sederhanakan CSS, andalkan class Bootstrap */
+        body { height: 100%; }
         .sidebar-icon { fill: currentColor; }
         @media print {
             body > #tmt_app > nav, .offcanvas, footer, .no-print { display: none !important; }
@@ -31,8 +27,10 @@
     
     @stack('head-scripts')
 </head>
-<body>
-    <div id="tmt_app">
+{{-- [PERBAIKAN] Body juga harus menjadi flex container --}}
+<body class="d-flex flex-column h-100">
+    {{-- [PERBAIKAN] div#tmt_app sekarang menjadi flex-grow-1 --}}
+    <div id="tmt_app" class="d-flex flex-column flex-grow-1">
         <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
             <div class="container-fluid">
                 @if(request()->is('tmt/karung/*') || request()->is('tmt-admin/*'))
@@ -47,25 +45,16 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    {{-- Menu items tidak berubah --}}
                     <ul class="navbar-nav me-auto">
                         @auth
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('dashboard') }}">Dashboard TMT</a>
-                            </li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('dashboard') }}">Dashboard TMT</a></li>
                             @role('Super Admin TMT')
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('tmt.admin.users.index') }}">Pengguna</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('tmt.admin.roles.index') }}">Peran</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('tmt.admin.settings.index') }}">Pengaturan</a>
-                            </li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('tmt.admin.users.index') }}">Pengguna</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('tmt.admin.roles.index') }}">Peran</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('tmt.admin.settings.index') }}">Pengaturan</a></li>
                             @can('view system logs')
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('tmt.admin.activity_log.index') }}">Log Aktivitas</a>
-                            </li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('tmt.admin.activity_log.index') }}">Log Aktivitas</a></li>
                             @endcan
                             @endrole
                         @endauth
@@ -78,7 +67,7 @@
                             <li class="nav-item dropdown">
                                 <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>{{ Auth::user()->name }}</a>
                                 <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                     <a class="dropdown-item" href="{{ route('profile.edit') }}">Profil Saya</a>
+                                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profil Saya</a>
                                     <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">{{ __('Logout') }}</a>
                                     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf</form>
                                 </div>
@@ -89,25 +78,18 @@
             </div>
         </nav>
 
-        <main class="d-flex flex-grow-1" style="overflow-x: hidden;">
+        {{-- [PERBAIKAN] Main sekarang menjadi container flex yang tumbuh dan menyembunyikan overflow --}}
+        <main class="d-flex flex-grow-1" style="overflow: hidden;">
             @yield('content')
         </main>
     </div>
     
+    {{-- Script tidak berubah --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
-    {{-- Memuat Alpine.js --}}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    {{-- JS untuk Tom Select --}}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-    
-    {{-- JS untuk Chart.js --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-
-    {{-- [BARU] JS untuk SweetAlert2 --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     @stack('footer-scripts')
 </body>
 </html>

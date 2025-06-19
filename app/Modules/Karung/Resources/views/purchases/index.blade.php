@@ -44,7 +44,7 @@
                         <form action="{{ route('karung.purchases.index') }}" method="GET">
                             <input type="hidden" name="status" value="{{ $status }}">
                             <div class="input-group">
-                                <input type="text" class="form-control" name="search" placeholder="Cari berdasarkan Kode Pembelian, No. Referensi, atau Nama Supplier..." value="{{ request('search') }}">
+                                <input type="text" class="form-control" name="search" placeholder="Cari berdasarkan Kode Pembelian atau Nama Supplier..." value="{{ request('search') }}">
                                 <button class="btn btn-primary" type="submit">Cari</button>
                             </div>
                         </form>
@@ -54,7 +54,7 @@
                         <table class="table table-striped table-hover table-bordered table-sm">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>Tanggal</th><th>Kode Pembelian</th><th>No. Referensi</th><th>Supplier</th>
+                                    <th>Tanggal</th><th>Kode Pembelian</th><th>Supplier</th>
                                     <th>Produk Dibeli</th><th class="text-end">Total</th><th class="text-center">Status</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
@@ -64,7 +64,6 @@
                                     <tr class="{{ $purchase->status != 'Completed' ? 'table-secondary text-muted' : '' }}">
                                         <td>{{ $purchase->transaction_date->format('d-m-Y H:i') }}</td>
                                         <td><strong>{{ $purchase->purchase_code }}</strong></td>
-                                        <td>{{ $purchase->purchase_reference_no ?: '-' }}</td>
                                         <td>{{ $purchase->supplier?->name ?: 'Pembelian Umum' }}</td>
                                         <td><span class="{{ $purchase->status != 'Completed' ? 'text-decoration-line-through' : '' }}">{{ $purchase->details->pluck('product.name')->implode(', ') }}</span></td>
                                         <td class="text-end"><span class="{{ $purchase->status != 'Completed' ? 'text-decoration-line-through' : '' }}">Rp {{ number_format($purchase->total_amount, 0, ',', '.') }}</span></td>
@@ -84,7 +83,6 @@
                                             @if($purchase->status != 'Deleted')
                                                 <a href="{{ route('karung.purchases.show', $purchase->id) }}" class="btn btn-info btn-sm text-white" title="Lihat Detail"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16"><path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/></svg></a>
                                                 @if($purchase->status == 'Completed')
-                                                    {{-- [BARU] Tombol Bayar --}}
                                                     @can('managePayment', $purchase)
                                                         @if($purchase->payment_status == 'Belum Lunas')
                                                             <button type="button" class="btn btn-success btn-sm pay-button"
@@ -130,7 +128,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="8" class="text-center">Tidak ada data transaksi pembelian.</td></tr>
+                                    <tr><td colspan="7" class="text-center">Tidak ada data transaksi pembelian.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
