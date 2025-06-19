@@ -21,9 +21,15 @@ Route::get('suppliers/{supplier}/history', [SupplierController::class, 'history'
 Route::resource('suppliers', SupplierController::class)->middleware('permission:karung.manage_suppliers');
 Route::get('customers/{customer}/history', [CustomerController::class, 'history'])->name('customers.history')->middleware('permission:karung.view_sales');
 Route::resource('customers', CustomerController::class)->middleware('permission:karung.manage_customers');
+
+// [PERBAIKAN] Definisikan route API untuk galeri SEBELUM resource controller produk.
+Route::get('/products/gallery-api', [ProductController::class, 'getProductGallery'])
+     ->name('products.gallery.api')
+     ->middleware('permission:karung.manage_products'); // Pastikan permission sesuai
+
 Route::resource('products', ProductController::class)->middleware('permission:karung.manage_products');
 
-// [BARU] Rute untuk Biaya Operasional
+// Rute untuk Biaya Operasional
 Route::resource('operational-expenses', \App\Modules\Karung\Http\Controllers\OperationalExpenseController::class)
     ->middleware('permission:karung.manage_expenses');
 

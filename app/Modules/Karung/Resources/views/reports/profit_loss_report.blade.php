@@ -12,7 +12,14 @@
                     <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">Kembali ke Dashboard</a>
                 </div>
                 <div class="card-body">
-                    <form method="GET" action="{{ route('karung.reports.profit_and_loss') }}" class="mb-4">
+                    <div class="mb-3">
+                        <a href="{{ route('karung.reports.profit_and_loss', ['preset' => 'today']) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'today' ? 'active' : '' }}">Hari Ini</a>
+                        <a href="{{ route('karung.reports.profit_and_loss', ['preset' => 'this_week']) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_week' ? 'active' : '' }}">Minggu Ini</a>
+                        <a href="{{ route('karung.reports.profit_and_loss', ['preset' => 'this_month']) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_month' ? 'active' : '' }}">Bulan Ini</a>
+                        <a href="{{ route('karung.reports.profit_and_loss', ['preset' => 'this_year']) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_year' ? 'active' : '' }}">Tahun Ini</a>
+                    </div>
+
+                    <form method="GET" action="{{ route('karung.reports.profit_and_loss') }}" class="mb-4 p-3 border rounded">
                         <div class="row g-3 align-items-end">
                             <div class="col-md-5">
                                 <label for="start_date" class="form-label">Tanggal Mulai</label>
@@ -23,7 +30,7 @@
                                 <input type="date" class="form-control" id="end_date" name="end_date" value="{{ $endDate }}">
                             </div>
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                                <button type="submit" class="btn btn-primary w-100">Filter Manual</button>
                             </div>
                         </div>
                     </form>
@@ -122,6 +129,7 @@
                             </tbody>
                         </table>
                     </div>
+
                 </div>
             </div>
         </div>

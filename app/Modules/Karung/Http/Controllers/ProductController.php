@@ -222,5 +222,28 @@ class ProductController extends Controller
                              ->with('error', "Terjadi kesalahan saat mencoba menghapus produk '{$product->name}'.");
         }
     }
-    // ... (method CRUD lainnya: show) ...
+    
+    public function getProductGallery(Request $request)
+    {
+        $query = Product::where('is_active', true)->where('stock', '>', 0);
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('sku', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        $products = $query->latest()->simplePaginate(2);
+
+        // [PERBAIKAN FINAL] Ubah cara membuat URL gambar di sini
+        $products->getCollection()->transform(function ($product) {
+            // Gunakan helper asset() yang sudah terbukti bekerja, sama seperti di halaman edit.
+            $product->image_url = $product->image_path ? asset('storage/' . $product->image_path) : 'https://via.placeholder.com/150';
+            return $product;
+        });
+
+        return response()->json($products);
+    }
 }

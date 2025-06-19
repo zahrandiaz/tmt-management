@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # [PERBAIKAN FINAL] Tambahkan baris ini
+    RewriteBase /tmt_management/
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

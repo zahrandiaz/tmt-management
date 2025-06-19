@@ -26,49 +26,83 @@ use App\Modules\Karung\Models\OperationalExpense;
 
 class ReportController extends Controller
 {
-    public function sales(Request $request)
+    private function getDateRange(Request $request): array
     {
+        $preset = $request->input('preset');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
+
+        if ($preset) {
+            switch ($preset) {
+                case 'this_week':
+                    $startDate = now()->startOfWeek()->format('Y-m-d');
+                    $endDate = now()->endOfWeek()->format('Y-m-d');
+                    break;
+                case 'this_month':
+                    $startDate = now()->startOfMonth()->format('Y-m-d');
+                    $endDate = now()->endOfMonth()->format('Y-m-d');
+                    break;
+                case 'this_year':
+                    $startDate = now()->startOfYear()->format('Y-m-d');
+                    $endDate = now()->endOfYear()->format('Y-m-d');
+                    break;
+                case 'today':
+                default:
+                    $startDate = now()->format('Y-m-d');
+                    $endDate = now()->format('Y-m-d');
+                    break;
+            }
+        } elseif (!$startDate && !$endDate) {
+            // Default ke hari ini jika tidak ada filter manual atau preset
+            $startDate = now()->format('Y-m-d');
+            $endDate = now()->format('Y-m-d');
+            $preset = 'today'; // Set preset aktif
+        } else {
+            // Jika ada filter manual, preset dianggap custom
+            $preset = 'custom';
+        }
+
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'activePreset' => $preset,
+        ];
+    }
+    
+    public function sales(Request $request)
+    {
+        $dateRange = $this->getDateRange($request);
+        $startDate = $dateRange['startDate'];
+        $endDate = $dateRange['endDate'];
+        $activePreset = $dateRange['activePreset'];
+
         $selectedCustomerId = $request->input('customer_id');
         $selectedUserId = $request->input('user_id');
 
         $query = SalesTransaction::with(['customer', 'user', 'details.product'])
-                                 ->where('status', 'Completed');
+                                     ->where('status', 'Completed');
 
-        if ($startDate) {
-            $query->whereDate('transaction_date', '>=', Carbon::parse($startDate));
-        }
-        if ($endDate) {
-            $query->whereDate('transaction_date', '<=', Carbon::parse($endDate));
-        }
-        if ($selectedCustomerId) {
-            $query->where('customer_id', $selectedCustomerId);
-        }
-        if ($selectedUserId) {
-            $query->where('user_id', $selectedUserId);
-        }
+        if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $query->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        if ($selectedCustomerId) { $query->where('customer_id', $selectedCustomerId); }
+        if ($selectedUserId) { $query->where('user_id', $selectedUserId); }
 
         $queryForTotals = clone $query;
-
         $totalTransactions = $queryForTotals->count();
         $totalRevenue = $queryForTotals->sum('total_amount');
 
         $allSalesDetails = $queryForTotals->with('details.product')->get()->pluck('details')->flatten();
-        $totalCost = $allSalesDetails->reduce(function ($carry, $detail) {
-            return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
-        }, 0);
+        $totalCost = $allSalesDetails->reduce(fn ($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
         $grossProfit = $totalRevenue - $totalCost;
 
         $sales = $query->latest('transaction_date')->paginate(10);
-        
         $customers = Customer::orderBy('name')->get();
         $users = User::role(['Super Admin TMT', 'Admin Modul Karung', 'Staff Modul Karung'])->orderBy('name')->get();
         
         return view('karung::reports.sales_report', compact(
             'sales', 'totalRevenue', 'totalTransactions', 'startDate', 'endDate', 
             'customers', 'users', 'selectedCustomerId', 'selectedUserId',
-            'totalCost', 'grossProfit'
+            'totalCost', 'grossProfit', 'activePreset'
         ));
     }
 
@@ -117,34 +151,28 @@ class ReportController extends Controller
 
     public function purchases(Request $request)
     {
-        // Logika tidak berubah, sudah mengambil semua data yang dibutuhkan
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $dateRange = $this->getDateRange($request);
+        $startDate = $dateRange['startDate'];
+        $endDate = $dateRange['endDate'];
+        $activePreset = $dateRange['activePreset'];
+
         $selectedSupplierId = $request->input('supplier_id');
 
         $query = PurchaseTransaction::with(['supplier', 'user', 'details.product'])
-                                       ->where('status', 'Completed');
+                                        ->where('status', 'Completed');
 
-        if ($startDate) {
-            $query->whereDate('transaction_date', '>=', Carbon::parse($startDate));
-        }
-        if ($endDate) {
-            $query->whereDate('transaction_date', '<=', Carbon::parse($endDate));
-        }
-        if ($selectedSupplierId) {
-            $query->where('supplier_id', $selectedSupplierId);
-        }
+        if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $query->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        if ($selectedSupplierId) { $query->where('supplier_id', $selectedSupplierId); }
 
         $totalTransactions = $query->clone()->count();
         $totalSpending = $query->clone()->sum('total_amount');
-
-        $purchases = $query->latest('transaction_date')->paginate(10); // Dibuat 10 agar konsisten
-
+        $purchases = $query->latest('transaction_date')->paginate(10);
         $suppliers = Supplier::orderBy('name')->get();
 
         return view('karung::reports.purchases_report', compact(
             'purchases', 'totalSpending', 'totalTransactions', 'startDate', 
-            'endDate', 'suppliers', 'selectedSupplierId'
+            'endDate', 'suppliers', 'selectedSupplierId', 'activePreset'
         ));
     }
 
@@ -218,29 +246,25 @@ class ReportController extends Controller
 
     public function profitAndLoss(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-
-        // Kalkulasi Laba Kotor (sudah benar)
+        $dateRange = $this->getDateRange($request);
+        $startDate = $dateRange['startDate'];
+        $endDate = $dateRange['endDate'];
+        $activePreset = $dateRange['activePreset'];
+        
         $salesQuery = SalesTransaction::where('status', 'Completed');
         if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
 
-        $salesDetails = SalesTransactionDetail::whereHas('transaction', function ($q) use ($salesQuery) {
-            $q->whereIn('id', $salesQuery->pluck('id'));
-        })->with('product.category')->get();
-
+        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn ($q) => $q->whereIn('id', $salesQuery->pluck('id')))->with('product.category')->get();
         $totalRevenue = $salesDetails->sum('sub_total');
         $totalCost = $salesDetails->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
         $grossProfit = $totalRevenue - $totalCost;
 
-        // [BARU] Kalkulasi Biaya Operasional
         $expensesQuery = OperationalExpense::query();
         if ($startDate) { $expensesQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $expensesQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
         $totalExpenses = $expensesQuery->sum('amount');
         
-        // [BARU] Kalkulasi Laba Bersih
         $netProfit = $grossProfit - $totalExpenses;
         
         $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
@@ -253,8 +277,8 @@ class ReportController extends Controller
             
         return view('karung::reports.profit_loss_report', compact(
             'totalRevenue', 'totalCost', 'grossProfit', 
-            'totalExpenses', 'netProfit', // <-- Data baru
-            'salesDetails', 'profitByCategory', 'startDate', 'endDate'
+            'totalExpenses', 'netProfit', 'salesDetails', 
+            'profitByCategory', 'startDate', 'endDate', 'activePreset'
         ));
     }
 
@@ -436,38 +460,32 @@ class ReportController extends Controller
 
     public function cashFlow(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $dateRange = $this->getDateRange($request);
+        $startDate = $dateRange['startDate'];
+        $endDate = $dateRange['endDate'];
+        $activePreset = $dateRange['activePreset'];
 
-        // Total Pemasukan dari Penjualan
         $salesQuery = SalesTransaction::where('status', 'Completed');
         if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         $totalIncome = $salesQuery->sum('amount_paid');
 
-        // Total Pengeluaran dari Pembelian
         $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
         if ($startDate) { $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         $purchaseExpense = $purchaseQuery->sum('amount_paid');
         
-        // [BARU] Total Pengeluaran dari Biaya Operasional
         $operationalExpenseQuery = OperationalExpense::query();
         if ($startDate) { $operationalExpenseQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $operationalExpenseQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
         $operationalExpense = $operationalExpenseQuery->sum('amount');
 
-        // [MODIFIKASI] Kalkulasi Arus Kas Bersih
         $totalExpense = $purchaseExpense + $operationalExpense;
         $netCashFlow = $totalIncome - $totalExpense;
 
         return view('karung::reports.cash_flow_report', compact(
-            'totalIncome', 
-            'purchaseExpense', // Kirim rincian pengeluaran
-            'operationalExpense', // Kirim rincian pengeluaran
-            'netCashFlow',
-            'startDate', 
-            'endDate'
+            'totalIncome', 'purchaseExpense', 'operationalExpense', 
+            'netCashFlow', 'startDate', 'endDate', 'activePreset'
         ));
     }
  }

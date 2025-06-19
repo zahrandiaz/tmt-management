@@ -17,8 +17,15 @@
                     </a>
                 </div>
                 <div class="card-body">
+                    <div class="mb-3">
+                        <a href="{{ route('karung.reports.purchases', ['preset' => 'today'] + request()->except(['preset', 'start_date', 'end_date'])) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'today' ? 'active' : '' }}">Hari Ini</a>
+                        <a href="{{ route('karung.reports.purchases', ['preset' => 'this_week'] + request()->except(['preset', 'start_date', 'end_date'])) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_week' ? 'active' : '' }}">Minggu Ini</a>
+                        <a href="{{ route('karung.reports.purchases', ['preset' => 'this_month'] + request()->except(['preset', 'start_date', 'end_date'])) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_month' ? 'active' : '' }}">Bulan Ini</a>
+                        <a href="{{ route('karung.reports.purchases', ['preset' => 'this_year'] + request()->except(['preset', 'start_date', 'end_date'])) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_year' ? 'active' : '' }}">Tahun Ini</a>
+                    </div>
+                    
                     {{-- Form Filter --}}
-                    <form method="GET" action="{{ route('karung.reports.purchases') }}" class="mb-4">
+                    <form method="GET" action="{{ route('karung.reports.purchases') }}" class="mb-4 p-3 border rounded">
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label for="start_date" class="form-label">Tanggal Mulai</label>
@@ -41,10 +48,13 @@
                             </div>
                         </div>
                         <div class="row mt-3">
-                            <div class="col-12"><button type="submit" class="btn btn-primary">Filter Laporan</button></div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Filter Manual</button>
+                                <a href="{{ route('karung.reports.purchases') }}" class="btn btn-secondary">Reset Filter</a>
+                            </div>
                         </div>
                     </form>
-
+                    
                     {{-- [PERBAIKAN] Tombol Export dengan struktur yang benar --}}
                     <div class="mb-4">
                         <strong>Export Laporan:</strong>
@@ -133,6 +143,7 @@
                     <div class="mt-3">
                         {{ $purchases->appends(request()->query())->links() }}
                     </div>
+
                 </div>
             </div>
         </div>
