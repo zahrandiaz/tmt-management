@@ -1,8 +1,5 @@
 <div class="d-flex flex-column flex-shrink-0 p-3 h-100">
-    <a href="{{ route('karung.dashboard') }}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
-        <svg class="sidebar-icon me-2" width="24" height="24"><use xlink:href="#speedometer2"/></svg>
-        <span class="fs-4">Menu Toko Karung</span>
-    </a>
+    {{-- ... (Header sidebar tidak berubah) ... --}}
     <hr>
     <ul class="nav nav-pills flex-column mb-auto">
         <li class="nav-item">
@@ -31,9 +28,28 @@
         </li>
         @endcanany
 
-        {{-- [MODIFIKASI] Grup Menu Keuangan & Laporan --}}
+        {{-- [BARU] Grup Menu Inventaris --}}
+        @canany(['karung.manage_products', 'karung.manage_stock_adjustments'])
+        <li>
+            <a href="#inventory-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*products*') || request()->is('*stock-adjustments*') ? '' : 'collapsed' }}">
+                <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#table"/></svg>
+                Inventaris
+            </a>
+            <div class="collapse {{ request()->is('*products*') || request()->is('*stock-adjustments*') ? 'show' : '' }}" id="inventory-submenu">
+                <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
+                    @can('karung.manage_products')
+                    <li><a href="{{ route('karung.products.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.products.*') ? 'active' : '' }}">Master Produk</a></li>
+                    @endcan
+                    @can('karung.manage_stock_adjustments')
+                    <li><a href="{{ route('karung.stock-adjustments.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.stock-adjustments.*') ? 'active' : '' }}">Penyesuaian Stok</a></li>
+                    @endcan
+                </ul>
+            </div>
+        </li>
+        @endcanany
+
         @canany(['karung.view_reports', 'karung.manage_expenses'])
-         <li>
+        <li>
             <a href="#finance-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*reports*') || request()->is('*operational-expenses*') ? '' : 'collapsed' }}">
                 <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#cash-coin"/></svg>
                 Keuangan
@@ -62,17 +78,15 @@
         </li>
         @endcanany
         
-        @canany(['karung.manage_products', 'karung.manage_categories', 'karung.manage_types', 'karung.manage_suppliers', 'karung.manage_customers'])
+        @canany(['karung.manage_categories', 'karung.manage_types', 'karung.manage_suppliers', 'karung.manage_customers'])
         <li>
-            <a href="#masterdata-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*product-categories*','*product-types*','*suppliers*','*customers*','*products*') ? '' : 'collapsed' }}">
+            {{-- ... (Submenu Master Data direstrukturisasi, Produk pindah ke Inventaris) ... --}}
+            <a href="#masterdata-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*product-categories*','*product-types*','*suppliers*','*customers*') ? '' : 'collapsed' }}">
                 <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#speedometer2"/></svg>
-                Master Data
+                Master Lainnya
             </a>
-            <div class="collapse {{ request()->is('*product-categories*','*product-types*','*suppliers*','*customers*','*products*') ? 'show' : '' }}" id="masterdata-submenu">
+            <div class="collapse {{ request()->is('*product-categories*','*product-types*','*suppliers*','*customers*') ? 'show' : '' }}" id="masterdata-submenu">
                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
-                    @can('karung.manage_products')
-                    <li><a href="{{ route('karung.products.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.products.*') ? 'active' : '' }}">Produk</a></li>
-                    @endcan
                     @can('karung.manage_categories')
                     <li><a href="{{ route('karung.product-categories.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.product-categories.*') ? 'active' : '' }}">Kategori</a></li>
                     @endcan

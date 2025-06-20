@@ -37,8 +37,12 @@
 
                     <div class="mb-4">
                         <strong>Export Laporan:</strong>
-                        <a href="{{ route('karung.reports.profit_loss.export', request()->query()) }}" class="btn btn-success btn-sm">Excel</a>
-                        <a href="{{ route('karung.reports.profit_loss.export.pdf', request()->query()) }}" class="btn btn-danger btn-sm">PDF</a>
+                        {{-- [MODIFIKASI] Menambahkan parameter tanggal ke route export --}}
+                        @php
+                            $exportParams = array_merge(request()->query(), ['start_date' => $startDate, 'end_date' => $endDate]);
+                        @endphp
+                        <a href="{{ route('karung.reports.profit_loss.export', $exportParams) }}" class="btn btn-success btn-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel-fill" viewBox="0 0 16 16"><path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M5.884 6.68 8 9.219l2.116-2.54a.5.5 0 1 1 .768.641L8.651 10l2.233 2.68a.5.5 0 0 1-.768.64L8 10.781l-2.116 2.54a.5.5 0 0 1-.768-.641L7.349 10 5.116 7.32a.5.5 0 1 1 .768-.64"/></svg> Excel</a>
+                        <a href="{{ route('karung.reports.profit_loss.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill" viewBox="0 0 16 16"><path d="M5.523 12.424q.21-.124.459-.238a8 8 0 0 1-.45.606c-.28.337-.498.516-.635.572a.27.27 0 0 1-.035.012.28.28 0 0 1-.031-.023c-.075-.041-.158-.1-.218-.17a.85.85 0 0 1-.135-.37c-.014-.042-.027-.102-.038-.172a.21.21 0 0 1 .035-.145c.022-.02.05-.038.083-.051a.2.2 0 0 1 .051-.028.2.2 0 0 1 .068.004q.032.007.07.02z"/><path fill-rule="evenodd" d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2m5.5 1.5v2a1 1 0 0 0 1 1h2zM.5 11.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/></svg> PDF</a>
                     </div>
                     <hr>
 
@@ -109,7 +113,7 @@
                             <tbody>
                                 @forelse ($salesDetails as $detail)
                                 @php
-                                    $purchasePrice = $detail->product?->purchase_price ?? 0;
+                                    $purchasePrice = $detail->purchase_price_at_sale; 
                                     $profitPerItem = $detail->selling_price_at_transaction - $purchasePrice;
                                     $subTotalProfit = $detail->quantity * $profitPerItem;
                                 @endphp

@@ -22,6 +22,7 @@ class SalesTransactionDetail extends Model
         'quantity',
         'selling_price_at_transaction',
         'sub_total',
+        'purchase_price_at_sale',
     ];
 
     /**

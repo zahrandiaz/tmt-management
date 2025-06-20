@@ -10,6 +10,7 @@ use App\Modules\Karung\Http\Controllers\ProductController;
 use App\Modules\Karung\Http\Controllers\PurchaseTransactionController;
 use App\Modules\Karung\Http\Controllers\SalesTransactionController;
 use App\Modules\Karung\Http\Controllers\ReportController;
+use App\Modules\Karung\Http\Controllers\StockAdjustmentController;
 
 // Rute Dashboard
 Route::get('/dashboard-modul', [DashboardController::class, 'index'])->name('dashboard')->middleware('permission:karung.access_module');
@@ -32,6 +33,11 @@ Route::resource('products', ProductController::class)->middleware('permission:ka
 // Rute untuk Biaya Operasional
 Route::resource('operational-expenses', \App\Modules\Karung\Http\Controllers\OperationalExpenseController::class)
     ->middleware('permission:karung.manage_expenses');
+
+// [BARU] Rute untuk Penyesuaian Stok
+Route::resource('stock-adjustments', StockAdjustmentController::class)
+    ->only(['index', 'create', 'store']) // Kita hanya butuh 3 method ini untuk sekarang
+    ->middleware('permission:karung.manage_stock_adjustments');
 
 // Rute Transaksi Pembelian
 Route::resource('purchases', PurchaseTransactionController::class)->middleware('permission:karung.access_module');

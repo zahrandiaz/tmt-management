@@ -47,6 +47,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             'karung.view_reports',
             'karung.manage_expenses',
+            'karung.manage_stock_adjustments',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -81,6 +82,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.view_reports',
             'karung.manage_payments', // [BARU] Berikan akses ke Admin Modul
             'karung.manage_expenses',
+            'karung.manage_stock_adjustments',
         ]);
         $this->command->info("Permissions untuk 'Admin Modul Karung' telah ditetapkan.");
 

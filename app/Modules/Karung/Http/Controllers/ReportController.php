@@ -255,9 +255,16 @@ class ReportController extends Controller
         if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
 
-        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn ($q) => $q->whereIn('id', $salesQuery->pluck('id')))->with('product.category')->get();
+        // [MODIFIKASI] Kita tidak perlu lagi ->with('product.category') di sini karena HPP sudah ada
+        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn ($q) => $q->whereIn('id', $salesQuery->pluck('id')))->get();
+        
         $totalRevenue = $salesDetails->sum('sub_total');
-        $totalCost = $salesDetails->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+
+        // [MODIFIKASI] Kalkulasi Total HPP sekarang menggunakan data historis yang akurat
+        $totalCost = $salesDetails->sum(function ($detail) {
+            return $detail->quantity * $detail->purchase_price_at_sale;
+        });
+
         $grossProfit = $totalRevenue - $totalCost;
 
         $expensesQuery = OperationalExpense::query();
@@ -267,11 +274,12 @@ class ReportController extends Controller
         
         $netProfit = $grossProfit - $totalExpenses;
         
+        // [MODIFIKASI] Kalkulasi laba per kategori juga menggunakan HPP akurat
         $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
             ->groupBy('product.category.name')
             ->map(function ($details, $categoryName) {
                 $rev = $details->sum('sub_total');
-                $cost = $details->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+                $cost = $details->sum(fn($d) => $d->quantity * $d->purchase_price_at_sale);
                 return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
             })->sortByDesc('total_profit');
             
@@ -287,7 +295,6 @@ class ReportController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        // [MODIFIKASI] Menyesuaikan semua kalkulasi agar sama dengan method utama
         $salesQuery = SalesTransaction::where('status', 'Completed');
         if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
@@ -296,7 +303,10 @@ class ReportController extends Controller
             ->with(['product.category', 'transaction'])->get();
         
         $totalRevenue = $salesDetails->sum('sub_total');
-        $totalCost = $salesDetails->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+
+        // [MODIFIKASI] Kalkulasi Total HPP Akurat disamakan dengan method utama
+        $totalCost = $salesDetails->sum(fn($detail) => $detail->quantity * $detail->purchase_price_at_sale);
+        
         $grossProfit = $totalRevenue - $totalCost;
 
         $expensesQuery = OperationalExpense::query();
@@ -306,21 +316,19 @@ class ReportController extends Controller
 
         $netProfit = $grossProfit - $totalExpenses;
 
+        // [MODIFIKASI] Kalkulasi Laba per Kategori Akurat disamakan dengan method utama
         $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
             ->groupBy('product.category.name')
             ->map(function ($details, $categoryName) {
                 $rev = $details->sum('sub_total');
-                $cost = $details->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+                $cost = $details->sum(fn($d) => $d->quantity * $d->purchase_price_at_sale);
                 return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
             })->sortByDesc('total_profit');
 
         $exportData = [
-            'totalRevenue' => $totalRevenue,
-            'totalCost' => $totalCost,
-            'grossProfit' => $grossProfit,
-            'totalExpenses' => $totalExpenses,
-            'netProfit' => $netProfit,
-            'profitByCategory' => $profitByCategory,
+            'totalRevenue' => $totalRevenue, 'totalCost' => $totalCost,
+            'grossProfit' => $grossProfit, 'totalExpenses' => $totalExpenses,
+            'netProfit' => $netProfit, 'profitByCategory' => $profitByCategory,
             'salesDetails' => $salesDetails,
         ];
 
@@ -330,7 +338,6 @@ class ReportController extends Controller
 
     public function exportProfitLossPdf(Request $request)
     {
-        // [MODIFIKASI] Menyesuaikan semua kalkulasi agar sama dengan method utama
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
@@ -342,22 +349,26 @@ class ReportController extends Controller
             ->with('product.category')->get();
         
         $totalRevenue = $salesDetails->sum('sub_total');
-        $totalCost = $salesDetails->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+        
+        // [MODIFIKASI] Kalkulasi Total HPP Akurat disamakan dengan method utama
+        $totalCost = $salesDetails->sum(fn($detail) => $detail->quantity * $detail->purchase_price_at_sale);
+
         $grossProfit = $totalRevenue - $totalCost;
 
         $expensesQuery = OperationalExpense::query();
         if ($startDate) { $expensesQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $expensesQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
         $totalExpenses = $expensesQuery->sum('amount');
-        $expensesDetails = $expensesQuery->get(); // Ambil detail untuk ditampilkan di PDF
+        $expensesDetails = $expensesQuery->get();
 
         $netProfit = $grossProfit - $totalExpenses;
 
+        // [MODIFIKASI] Kalkulasi Laba per Kategori Akurat disamakan dengan method utama
         $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
             ->groupBy('product.category.name')
             ->map(function ($details, $categoryName) {
                 $rev = $details->sum('sub_total');
-                $cost = $details->reduce(fn($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+                $cost = $details->sum(fn($d) => $d->quantity * $d->purchase_price_at_sale);
                 return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
             })->sortByDesc('total_profit');
 

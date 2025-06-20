@@ -20,6 +20,9 @@ class SalesTransaction extends Model
         'total_amount',
         'notes',
         'user_id',
+        'payment_method',
+        'payment_status',
+        'amount_paid',
     ];
 
     /**

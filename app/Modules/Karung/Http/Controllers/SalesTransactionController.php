@@ -52,17 +52,22 @@ class SalesTransactionController extends Controller
         $this->authorize('create', SalesTransaction::class);
         $validatedData = $request->validated();
         
+        $productIds = collect($validatedData['details'])->pluck('product_id');
+        $products = Product::find($productIds)->keyBy('id');
+
         foreach ($validatedData['details'] as $detail) {
-            $product = Product::find($detail['product_id']);
-            if ($product->stock < $detail['quantity']) {
+            $product = $products->get($detail['product_id']);
+            if (!$product || $product->stock < $detail['quantity']) {
                 return redirect()->back()
-                                 ->with('error', "Stok untuk produk '{$product->name}' tidak mencukupi (tersisa {$product->stock}).")
-                                 ->withInput();
+                    ->with('error', "Stok untuk produk '{$product->name}' tidak mencukupi (tersisa {$product->stock}).")
+                    ->withInput();
             }
         }
         
         try {
             DB::beginTransaction();
+            
+            // Perhitungan dan logika yang benar sebelum menyimpan
             $customerId = $validatedData['customer_id'];
             if (is_null($customerId)) { 
                 $defaultCustomer = Customer::where('name', 'Pelanggan Umum')->first();
@@ -74,31 +79,36 @@ class SalesTransactionController extends Controller
                 $totalAmount += $detail['quantity'] * $detail['selling_price_at_transaction'];
             }
 
-            $amountPaid = $request->input('amount_paid', 0); // Ambil dari request, bukan validatedData
+            $amountPaid = $request->input('amount_paid', 0);
             if ($validatedData['payment_status'] === 'Lunas') {
                 $amountPaid = $totalAmount;
             }
 
-            // [PERBAIKAN] Buat objek dan set properti secara manual
-            $sale = new SalesTransaction();
-            $sale->business_unit_id = 1;
-            $sale->customer_id = $customerId;
-            $sale->transaction_date = $validatedData['transaction_date'];
-            $sale->notes = $validatedData['notes'];
-            $sale->user_id = auth()->id();
-            $sale->invoice_number = 'INV/'.date('Ymd').'/'.strtoupper(Str::random(6));
-            $sale->total_amount = $totalAmount;
-            $sale->payment_method = $validatedData['payment_method'];
-            $sale->payment_status = $validatedData['payment_status'];
-            $sale->amount_paid = $amountPaid;
-            $sale->save(); // Simpan
+            $sale = SalesTransaction::create([
+                'business_unit_id' => 1, //TODO: Dibuat dinamis nanti
+                'customer_id' => $customerId,
+                'transaction_date' => $validatedData['transaction_date'],
+                'notes' => $validatedData['notes'],
+                'user_id' => auth()->id(),
+                'invoice_number' => 'INV/'.date('Ymd').'/'.strtoupper(Str::random(6)),
+                'total_amount' => $totalAmount,
+                'payment_method' => $validatedData['payment_method'],
+                'payment_status' => $validatedData['payment_status'],
+                'amount_paid' => $amountPaid,
+            ]);
             
-            // Simpan detail
+            // [MODIFIKASI] Simpan detail dengan HPP
             foreach ($validatedData['details'] as $detail) {
+                $product = $products->get($detail['product_id']);
+                $purchasePrice = $product ? $product->purchase_price : 0; // Ambil harga modal produk
                 $subTotal = $detail['quantity'] * $detail['selling_price_at_transaction'];
+
                 $sale->details()->create([
-                    'product_id' => $detail['product_id'], 'quantity' => $detail['quantity'],
-                    'selling_price_at_transaction' => $detail['selling_price_at_transaction'], 'sub_total' => $subTotal,
+                    'product_id' => $detail['product_id'],
+                    'quantity' => $detail['quantity'],
+                    'selling_price_at_transaction' => $detail['selling_price_at_transaction'],
+                    'purchase_price_at_sale' => $purchasePrice, // <-- DATA HPP DISIMPAN DI SINI
+                    'sub_total' => $subTotal,
                 ]);
             }
 
@@ -147,39 +157,47 @@ class SalesTransactionController extends Controller
         $this->authorize('update', $sale);
         $validatedData = $request->validated();
         
+        $productIds = collect($validatedData['details'])->pluck('product_id');
+        $products = Product::find($productIds)->keyBy('id');
+
         // ... (validasi stok tidak berubah) ...
 
         try {
             DB::beginTransaction();
             $stockService->handleSaleUpdate($sale, $validatedData['details']);
             
-            $newTotalAmount = 0;
-            foreach ($validatedData['details'] as $newDetail) {
-                $newTotalAmount += $newDetail['quantity'] * $newDetail['selling_price_at_transaction'];
-            }
+            $newTotalAmount = collect($validatedData['details'])->sum(function ($detail) {
+                return $detail['quantity'] * $detail['selling_price_at_transaction'];
+            });
 
-            $amountPaid = $request->input('amount_paid', 0); // Ambil dari request
+            $amountPaid = $request->input('amount_paid', 0);
             if ($validatedData['payment_status'] === 'Lunas') {
                 $amountPaid = $newTotalAmount;
             }
 
-            // [PERBAIKAN] Update properti secara manual sebelum save
-            $sale->transaction_date = $validatedData['transaction_date'];
-            $sale->customer_id = $validatedData['customer_id'];
-            $sale->notes = $validatedData['notes'];
-            $sale->user_id = auth()->id();
-            $sale->total_amount = $newTotalAmount;
-            $sale->payment_method = $validatedData['payment_method'];
-            $sale->payment_status = $validatedData['payment_status'];
-            $sale->amount_paid = $amountPaid;
-            $sale->save(); // Simpan perubahan
+            $sale->update([
+                'transaction_date' => $validatedData['transaction_date'],
+                'customer_id' => $validatedData['customer_id'],
+                'notes' => $validatedData['notes'],
+                'total_amount' => $newTotalAmount,
+                'payment_method' => $validatedData['payment_method'],
+                'payment_status' => $validatedData['payment_status'],
+                'amount_paid' => $amountPaid,
+            ]);
             
             $sale->details()->delete();
+            // [MODIFIKASI] Simpan ulang detail dengan HPP
             foreach ($validatedData['details'] as $newDetail) {
+                $product = $products->get($newDetail['product_id']);
+                $purchasePrice = $product ? $product->purchase_price : 0;
                 $subTotal = $newDetail['quantity'] * $newDetail['selling_price_at_transaction'];
+
                 $sale->details()->create([
-                    'product_id' => $newDetail['product_id'], 'quantity' => $newDetail['quantity'],
-                    'selling_price_at_transaction' => $newDetail['selling_price_at_transaction'], 'sub_total' => $subTotal,
+                    'product_id' => $newDetail['product_id'],
+                    'quantity' => $newDetail['quantity'],
+                    'selling_price_at_transaction' => $newDetail['selling_price_at_transaction'],
+                    'purchase_price_at_sale' => $purchasePrice, // <-- DATA HPP DISIMPAN DI SINI
+                    'sub_total' => $subTotal,
                 ]);
             }
 
