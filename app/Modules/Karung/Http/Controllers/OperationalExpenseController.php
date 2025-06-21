@@ -15,7 +15,7 @@ class OperationalExpenseController extends Controller
     {
         $this->authorize('viewAny', OperationalExpense::class);
 
-        $query = OperationalExpense::with('user');
+        $query = OperationalExpense::with(['user', 'salesTransaction', 'purchaseTransaction']);
 
         if ($request->filled('start_date')) {
             $query->whereDate('date', '>=', $request->start_date);

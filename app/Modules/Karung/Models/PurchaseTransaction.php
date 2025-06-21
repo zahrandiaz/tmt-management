@@ -57,4 +57,9 @@ class PurchaseTransaction extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function operationalExpenses()
+    {
+        return $this->hasMany(OperationalExpense::class, 'purchase_transaction_id');
+    }
 }

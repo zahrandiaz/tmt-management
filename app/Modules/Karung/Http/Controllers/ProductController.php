@@ -11,6 +11,7 @@ use Illuminate\Http\Request; // Mungkin akan kita gunakan nanti
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str; // Untuk helper string seperti Str::upper, Str::random
 use Illuminate\Support\Facades\Storage; // <-- PASTIKAN INI ADA
+use Intervention\Image\Laravel\Facades\Image;
 
 class ProductController extends Controller
 {
@@ -96,13 +97,25 @@ class ProductController extends Controller
         $sku = 'PROD-' . $currentBusinessUnitId . '-' . strtoupper(Str::random(8));
         // Alternatif lain: $sku = 'PROD-' . $currentBusinessUnitId . '-' . time();
 
-        // Handle file upload untuk image_path
+        // [MODIFIKASI] Handle file upload dengan kompresi
         $imagePath = null;
         if ($request->hasFile('image_path')) {
-            // Simpan file di storage/app/public/product_images
-            // Jangan lupa jalankan `php artisan storage:link` di terminal Anda sekali
-            // agar folder public/storage terhubung ke storage/app/public
-            $imagePath = $request->file('image_path')->store('product_images', 'public');
+            $image = $request->file('image_path');
+            // [MODIFIKASI] Ganti ekstensi menjadi .webp untuk nama file baru
+            $imageName = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME) . '-' . time() . '.webp';
+            
+            // Ubah ukuran, konversi ke WebP dengan kualitas 75%
+            $img = Image::read($image->getRealPath());
+            $img->resize(1000, 1000, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })->toWebp(75);
+
+            // Simpan gambar yang sudah dioptimasi
+            $storagePath = storage_path('app/public/product_images/' . $imageName);
+            $img->save($storagePath);
+            
+            $imagePath = 'product_images/' . $imageName;
         }
 
         // Siapkan data untuk disimpan
@@ -168,15 +181,26 @@ class ProductController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        // Handle file upload untuk image_path jika ada file baru
+        // [MODIFIKASI] Handle file upload dengan kompresi
         if ($request->hasFile('image_path')) {
-            // Hapus gambar lama jika ada
             if ($product->image_path) {
                 Storage::disk('public')->delete($product->image_path);
             }
 
-            // Simpan gambar baru dan update path-nya
-            $validatedData['image_path'] = $request->file('image_path')->store('product_images', 'public');
+            $image = $request->file('image_path');
+            // [MODIFIKASI] Ganti ekstensi menjadi .webp
+            $imageName = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME) . '-' . time() . '.webp';
+            
+            $img = Image::read($image->getRealPath());
+            $img->resize(1000, 1000, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })->toWebp(75);
+
+            $storagePath = storage_path('app/public/product_images/' . $imageName);
+            $img->save($storagePath);
+            
+            $validatedData['image_path'] = 'product_images/' . $imageName;
         }
 
         // Handle checkbox 'is_active'

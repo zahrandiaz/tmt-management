@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
-
+use Intervention\Image\Laravel\Facades\Image;
 
 class PurchaseTransactionController extends Controller
 {
@@ -84,19 +84,37 @@ class PurchaseTransactionController extends Controller
             $purchase->payment_status = $validatedData['payment_status'];
             $purchase->amount_paid = $amountPaid;
 
+            // [MODIFIKASI] Handle upload lampiran dengan kompresi
             if ($request->hasFile('attachment_path')) {
-                $purchase->attachment_path = $validatedData['attachment_path']->store('purchase_attachments', 'public');
+                $image = $request->file('attachment_path');
+                $imageName = 'nota-'.time().'.webp';
+
+                $img = Image::read($image->getRealPath());
+                $img->resize(1200, 1200, function ($constraint) { // Sedikit lebih besar untuk nota agar jelas
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })->toWebp(70); // Kualitas 70% sudah cukup untuk nota
+
+                $storagePath = storage_path('app/public/purchase_attachments/' . $imageName);
+                $img->save($storagePath);
+
+                $purchase->attachment_path = 'purchase_attachments/' . $imageName;
             }
-            $purchase->save(); // Simpan
+            $purchase->save();
             
-            foreach ($validatedData['details'] as $detail) {
-                $subTotal = $detail['quantity'] * $detail['purchase_price_at_transaction'];
-                $purchase->details()->create([
-                    'product_id' => $detail['product_id'], 'quantity' => $detail['quantity'],
-                    'purchase_price_at_transaction' => $detail['purchase_price_at_transaction'], 'sub_total' => $subTotal,
+            // [BARU] Logika untuk menyimpan biaya operasional terkait
+            if ($request->filled('related_expense_amount') && $request->filled('related_expense_description')) {
+                // Gunakan relasi yang sudah kita buat di Model
+                $purchase->operationalExpenses()->create([
+                    'business_unit_id' => $purchase->business_unit_id,
+                    'date' => $purchase->transaction_date,
+                    'description' => $request->input('related_expense_description'),
+                    'amount' => $request->input('related_expense_amount'),
+                    'category' => 'Biaya Transaksi Pembelian', // Kategori default
+                    'user_id' => auth()->id(),
                 ]);
             }
-            
+
             $stockService->handlePurchaseCreation($validatedData['details']);
             DB::commit();
             activity()->log("Membuat transaksi pembelian baru dengan kode #{$purchase->purchase_code}");
@@ -154,11 +172,25 @@ class PurchaseTransactionController extends Controller
             $purchase->payment_status = $validatedData['payment_status'];
             $purchase->amount_paid = $amountPaid;
             
+            // [MODIFIKASI] Handle upload lampiran dengan kompresi
             if ($request->hasFile('attachment_path')) {
                 if ($purchase->attachment_path) { Storage::disk('public')->delete($purchase->attachment_path); }
-                $purchase->attachment_path = $validatedData['attachment_path']->store('purchase_attachments', 'public');
+                
+                $image = $request->file('attachment_path');
+                $imageName = 'nota-'.time().'.webp';
+
+                $img = Image::read($image->getRealPath());
+                $img->resize(1200, 1200, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })->toWebp(70);
+                
+                $storagePath = storage_path('app/public/purchase_attachments/' . $imageName);
+                $img->save($storagePath);
+
+                $purchase->attachment_path = 'purchase_attachments/' . $imageName;
             }
-            $purchase->save(); // Simpan perubahan
+            $purchase->save();
             
             $purchase->details()->delete();
             foreach ($validatedData['details'] as $newDetail) {

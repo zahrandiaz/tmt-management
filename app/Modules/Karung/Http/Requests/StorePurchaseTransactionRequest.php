@@ -24,6 +24,9 @@ class StorePurchaseTransactionRequest extends FormRequest
             'payment_method'        => ['required', 'string', 'max:50'],
             'payment_status'        => ['required', 'string', Rule::in(['Lunas', 'Belum Lunas'])],
             'amount_paid'           => ['nullable', 'numeric', 'min:0'],
+            'related_expense_amount'      => ['nullable', 'numeric', 'min:0'],
+            'related_expense_description' => ['nullable', 'string', 'max:255', 'required_with:related_expense_amount'],
+            
             // Aturan detail tidak berubah
             'details'               => ['required', 'array', 'min:1'],
             'details.*.product_id'  => ['required', 'integer', 'exists:karung_products,id'],

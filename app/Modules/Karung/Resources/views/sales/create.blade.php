@@ -43,6 +43,20 @@
                                 </div>
                             </div>
 
+                            <div class="p-3 border rounded mb-4 bg-light">
+                                <h6 class="mb-3">Biaya Terkait Transaksi (Opsional)</h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <label for="related_expense_description" class="form-label">Keterangan Biaya</label>
+                                        <input type="text" class="form-control" name="related_expense_description" id="related_expense_description" placeholder="Contoh: Ongkos Kirim, Bensin, Upah Bongkar">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="related_expense_amount" class="form-label">Jumlah Biaya (Rp)</label>
+                                        <input type="number" class="form-control" name="related_expense_amount" id="related_expense_amount" placeholder="Contoh: 50000">
+                                    </div>
+                                </div>
+                            </div>
+
                             <h5 class="mb-3">Detail Produk</h5>
                             <div class="table-responsive">
                                 <table class="table table-bordered">

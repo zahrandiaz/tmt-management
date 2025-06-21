@@ -13,7 +13,7 @@
                 <table class="table table-striped table-hover">
                     <thead class="table-dark">
                         <tr>
-                            <th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th class="text-end">Jumlah</th><th>Dicatat Oleh</th><th>Aksi</th>
+                            <th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th>Terkait Transaksi</th><th class="text-end">Jumlah</th><th>Dicatat Oleh</th><th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -22,6 +22,19 @@
                             <td>{{ $expense->date->format('d M Y') }}</td>
                             <td><span class="badge bg-secondary">{{ $expense->category }}</span></td>
                             <td>{{ $expense->description }}</td>
+                            <td>
+                                @if($expense->salesTransaction)
+                                    <a href="{{ route('karung.sales.show', $expense->sales_transaction_id) }}" class="badge bg-success text-decoration-none">
+                                        Penjualan: {{ $expense->salesTransaction->invoice_number }}
+                                    </a>
+                                @elseif($expense->purchaseTransaction)
+                                    <a href="{{ route('karung.purchases.show', $expense->purchase_transaction_id) }}" class="badge bg-info text-decoration-none">
+                                        Pembelian: {{ $expense->purchaseTransaction->purchase_code }}
+                                    </a>
+                                @else
+                                    <span class="text-muted fst-italic">Umum</span>
+                                @endif
+                            </td>
                             <td class="text-end">Rp {{ number_format($expense->amount, 0, ',', '.') }}</td>
                             <td>{{ $expense->user->name ?? 'N/A' }}</td>
                             <td>
@@ -33,7 +46,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="6" class="text-center">Belum ada data biaya operasional.</td></tr>
+                        <tr><td colspan="7" class="text-center">Belum ada data biaya operasional.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

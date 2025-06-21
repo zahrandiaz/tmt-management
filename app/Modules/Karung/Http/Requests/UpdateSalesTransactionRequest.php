@@ -27,6 +27,7 @@ class UpdateSalesTransactionRequest extends FormRequest
             'details.*.product_id'  => ['required', 'integer', 'exists:karung_products,id'],
             'details.*.quantity'    => ['required', 'integer', 'min:1'],
             'details.*.selling_price_at_transaction' => ['required', 'numeric', 'min:0'],
+            'details.*.purchase_price_at_sale'       => ['required', 'numeric', 'min:0'],
         ];
     }
 }

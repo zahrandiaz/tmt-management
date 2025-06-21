@@ -10,6 +10,7 @@
                 'product_id' => $detail->product_id,
                 'quantity' => $detail->quantity,
                 'price' => $detail->selling_price_at_transaction,
+                'hpp' => $detail->purchase_price_at_sale, // <-- TAMBAHKAN INI
                 'stock' => ($detail->product->stock ?? 0) + $detail->quantity,
                 'error' => ''
             ];
@@ -64,6 +65,7 @@
                                         <tr>
                                             <th scope="col" style="width: 40%;">Produk <span class="text-danger">*</span></th>
                                             <th scope="col">Jumlah <span class="text-danger">*</span></th>
+                                            <th scope="col">Harga Modal (HPP)</th>
                                             <th scope="col">Harga Jual / Satuan <span class="text-danger">*</span></th>
                                             <th scope="col">Subtotal</th>
                                             <th scope="col" class="text-center">Aksi</th>
@@ -77,10 +79,17 @@
                                                     <input :id="'product-select-' + index" x-init="initTomSelect($el, index, item.product_id)" />
                                                 </td>
                                                 <td>
-                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="validateStock(index)" class="form-control" :class="{'is-invalid': item.error}" placeholder="Jumlah" required min="1">
-                                                     <template x-if="item.error">
-                                                        <div class="text-danger small mt-1" x-text="item.error"></div>
-                                                    </template>
+                                                    <input type="number" :name="'details[' + index + '][quantity]'" x-model.number="item.quantity" @input="validateStock(index)" class="form-control" :class="{'is-invalid': item.error}" required min="1">
+                                                    <template x-if="item.error"><div class="text-danger small mt-1" x-text="item.error"></div></template>
+                                                </td>
+                                                {{-- [BARU] Kolom input HPP --}}
+                                                <td>
+                                                    @can('karung.edit_historical_hpp')
+                                                        <input type="number" :name="'details[' + index + '][purchase_price_at_sale]'" x-model.number="item.hpp" class="form-control" placeholder="Harga Modal" required min="0">
+                                                    @else
+                                                        <input type="text" :value="formatCurrency(item.hpp)" class="form-control bg-light" readonly>
+                                                        <input type="hidden" :name="'details[' + index + '][purchase_price_at_sale]'" x-model="item.hpp">
+                                                    @endcan
                                                 </td>
                                                 <td>
                                                     <input type="number" :name="'details[' + index + '][selling_price_at_transaction]'" x-model.number="item.price" class="form-control" placeholder="Harga Jual" required min="0">
@@ -174,7 +183,7 @@
 <script>
     function salesForm(config) {
         return {
-            items: config.initialItems.length > 0 ? config.initialItems : [{ product_id: '', quantity: 1, price: 0, stock: Infinity, error: '' }],
+            items: config.initialItems.length > 0 ? config.initialItems : [{ product_id: '', quantity: 1, price: 0, hpp: 0, stock: Infinity, error: '' }],
             productsData: config.productsData,
             tomSelectInstances: [],
             payment_status: config.payment_status || 'Lunas',
