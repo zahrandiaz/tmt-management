@@ -4,42 +4,41 @@ namespace App\Http\Controllers\Tmt;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Modules\Karung\Models\Setting; // Import model Setting dari modul Karung
+use App\Modules\Karung\Models\Setting;
 
 class SettingController extends Controller
 {
-    /**
-     * Menampilkan halaman pengaturan.
-     */
     public function index()
     {
-        // TODO: Nanti ini harus dinamis berdasarkan Instansi Bisnis
-        $currentBusinessUnitId = 1;
+        $currentBusinessUnitId = 1; // TODO: Dinamis
 
-        // Ambil semua pengaturan untuk business unit ini dan ubah menjadi format yang mudah diakses
-        // ->pluck('setting_value', 'setting_key') akan membuat array asosiatif
-        // contoh: ['automatic_stock_management' => 'true', 'default_tax_rate' => '11']
         $settings = Setting::where('business_unit_id', $currentBusinessUnitId)
-                           ->pluck('setting_value', 'setting_key');
+                            ->pluck('setting_value', 'setting_key');
 
         return view('tmt.settings.index', compact('settings'));
     }
 
-    /**
-     * Menyimpan perubahan pengaturan.
-     */
     public function update(Request $request)
     {
-        // TODO: Nanti ini harus dinamis berdasarkan Instansi Bisnis
-        $currentBusinessUnitId = 1;
+        $currentBusinessUnitId = 1; // TODO: Dinamis
 
-        // Validasi input jika perlu. Untuk checkbox, kita bisa langsung proses.
+        // [MODIFIKASI] Tambahkan validasi untuk informasi toko
         $validatedData = $request->validate([
-            'automatic_stock_management' => ['sometimes', 'string'], // Diterima sebagai 'true' atau 'false'
+            'store_name'    => ['nullable', 'string', 'max:255'],
+            'store_address' => ['nullable', 'string'],
+            'store_phone'   => ['nullable', 'string', 'max:50'],
+            'automatic_stock_management' => ['sometimes', 'string'],
         ]);
 
-        // Looping melalui setiap pengaturan yang dikirim dari form
-        foreach ($validatedData as $key => $value) {
+        // [REFACTOR] Logika penyimpanan yang lebih scalable
+        $settingsToUpdate = [
+            'store_name'    => $request->input('store_name', ''),
+            'store_address' => $request->input('store_address', ''),
+            'store_phone'   => $request->input('store_phone', ''),
+            'automatic_stock_management' => $request->has('automatic_stock_management') ? 'true' : 'false',
+        ];
+
+        foreach ($settingsToUpdate as $key => $value) {
             Setting::updateOrCreate(
                 [
                     'business_unit_id' => $currentBusinessUnitId,
@@ -47,19 +46,6 @@ class SettingController extends Controller
                 ],
                 [
                     'setting_value'    => $value,
-                ]
-            );
-        }
-
-        // Handle checkbox yang tidak dikirim saat tidak dicentang
-        if (!$request->has('automatic_stock_management')) {
-            Setting::updateOrCreate(
-                [
-                    'business_unit_id' => $currentBusinessUnitId,
-                    'setting_key'      => 'automatic_stock_management',
-                ],
-                [
-                    'setting_value'    => 'false',
                 ]
             );
         }

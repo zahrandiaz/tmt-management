@@ -23,6 +23,8 @@ class PurchaseTransaction extends Model
         'attachment_path',
         'user_id',
         'status',
+        'payment_status',
+        'amount_paid',
     ];
 
     /**
@@ -32,6 +34,7 @@ class PurchaseTransaction extends Model
      */
     protected $casts = [
         'transaction_date' => 'datetime',
+        'amount_paid' => 'decimal:2',
     ];
 
     /**

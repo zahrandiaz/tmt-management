@@ -24,7 +24,7 @@
             .table-dark th { background-color: #eee !important; color: black !important; border-color: #ddd !important; }
         }
     </style>
-    
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     @stack('head-scripts')
 </head>
 {{-- [PERBAIKAN] Body juga harus menjadi flex container --}}

@@ -4,13 +4,14 @@
 
 @section('module-content')
 <div class="container-fluid">
+    {{-- Inisialisasi AlpineJS dengan data yang ada --}}
     <div x-data="salesForm({
         initialItems: {{ json_encode($sale->details->map(function($detail) {
             return [
                 'product_id' => $detail->product_id,
                 'quantity' => $detail->quantity,
                 'price' => $detail->selling_price_at_transaction,
-                'hpp' => $detail->purchase_price_at_sale, // <-- TAMBAHKAN INI
+                'hpp' => $detail->purchase_price_at_sale,
                 'stock' => ($detail->product->stock ?? 0) + $detail->quantity,
                 'error' => ''
             ];
@@ -30,8 +31,8 @@
                             <h5 class="mb-0">Edit Transaksi Penjualan: {{ $sale->invoice_number }}</h5>
                         </div>
                         <div class="card-body">
-                            @include('karung::components.flash-message')
-                             <div class="row mb-3">
+                            {{-- Form utama (tanggal, pelanggan, catatan) tidak berubah --}}
+                            <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="transaction_date" class="form-label">Tanggal Transaksi <span class="text-danger">*</span></label>
                                     <input type="datetime-local" class="form-control @error('transaction_date') is-invalid @enderror" id="transaction_date" name="transaction_date" value="{{ old('transaction_date', $sale->transaction_date->format('Y-m-d\TH:i')) }}" required>
@@ -57,6 +58,25 @@
                                     @error('notes') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
+
+                            {{-- [MODIFIKASI] Menambahkan Blok Biaya Operasional --}}
+                            @php
+                                $relatedExpense = $sale->operationalExpenses->first();
+                            @endphp
+                            <div class="p-3 border rounded mb-4 bg-light">
+                                <h6 class="mb-3">Biaya Terkait Transaksi (Opsional)</h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <label for="related_expense_description" class="form-label">Keterangan Biaya</label>
+                                        <input type="text" class="form-control" name="related_expense_description" id="related_expense_description" placeholder="Contoh: Biaya Transportasi" value="{{ old('related_expense_description', $relatedExpense->description ?? '') }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="related_expense_amount" class="form-label">Jumlah Biaya (Rp)</label>
+                                        <input type="number" class="form-control" name="related_expense_amount" id="related_expense_amount" placeholder="Contoh: 15000" value="{{ old('related_expense_amount', $relatedExpense->amount ?? '') }}">
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Akhir Blok --}}
 
                             <h5 class="mb-3">Detail Produk</h5>
                             <div class="table-responsive">
@@ -156,6 +176,7 @@
                                 <a href="{{ url()->previous() }}" class="btn btn-outline-secondary me-2">Batal</a>
                                 <button type="submit" class="btn btn-warning" :disabled="items.length === 0 || items.some(item => !item.product_id || item.error)">Simpan Perubahan</button>
                             </div>
+
                         </div>
                     </div>
                 </div>

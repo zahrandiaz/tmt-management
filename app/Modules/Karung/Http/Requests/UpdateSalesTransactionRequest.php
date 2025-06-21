@@ -28,6 +28,8 @@ class UpdateSalesTransactionRequest extends FormRequest
             'details.*.quantity'    => ['required', 'integer', 'min:1'],
             'details.*.selling_price_at_transaction' => ['required', 'numeric', 'min:0'],
             'details.*.purchase_price_at_sale'       => ['required', 'numeric', 'min:0'],
+            'related_expense_description' => ['nullable', 'string', 'max:255', 'required_with:related_expense_amount'],
+            'related_expense_amount'      => ['nullable', 'numeric', 'min:0', 'required_with:related_expense_description'],
         ];
     }
 }

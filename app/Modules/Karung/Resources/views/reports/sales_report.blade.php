@@ -15,6 +15,7 @@
                     </a>
                 </div>
                 <div class="card-body">
+                    {{-- Form Filter tidak berubah --}}
                     <div class="mb-3">
                         <a href="{{ route('karung.reports.sales', ['preset' => 'today'] + request()->except(['preset', 'start_date', 'end_date'])) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'today' ? 'active' : '' }}">Hari Ini</a>
                         <a href="{{ route('karung.reports.sales', ['preset' => 'this_week'] + request()->except(['preset', 'start_date', 'end_date'])) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_week' ? 'active' : '' }}">Minggu Ini</a>
@@ -101,7 +102,6 @@
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="table-dark">
-                                {{-- [MODIFIKASI] Header Tabel Baru dengan Penomoran --}}
                                 <tr>
                                     <th scope="col" style="width: 1%;"></th>
                                     <th scope="col" style="width: 1%;">#</th>
@@ -116,13 +116,9 @@
                             <tbody>
                                 @forelse ($sales as $sale)
                                     @php
-                                        // Kalkulasi per baris
-                                        $totalModal = $sale->details->reduce(function ($carry, $detail) {
-                                            return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
-                                        }, 0);
-                                        $totalLaba = $sale->total_amount - $totalModal;
+                                        // [MODIFIKASI] Kalkulasi Laba per baris sekarang menggunakan data akurat dari 'total_cost'
+                                        $totalLaba = $sale->total_amount - $sale->total_cost;
                                     @endphp
-                                    {{-- Baris Master --}}
                                     <tr class="align-middle">
                                         <td>
                                             <button @click="openRow = (openRow === {{ $sale->id }}) ? null : {{ $sale->id }}" class="btn btn-sm btn-outline-secondary">
@@ -130,18 +126,16 @@
                                                 <svg x-show="openRow === {{ $sale->id }}" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-lg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"/></svg>
                                             </button>
                                         </td>
-                                        {{-- [MODIFIKASI] Kolom Nomor --}}
                                         <td>{{ $loop->iteration + $sales->firstItem() - 1 }}</td>
                                         <td><a href="{{ route('karung.sales.show', $sale->id) }}">{{ $sale->invoice_number }}</a></td>
                                         <td>{{ $sale->transaction_date->format('d-m-Y H:i') }}</td>
                                         <td>{{ $sale->customer->name ?? 'Penjualan Umum' }}</td>
-                                        <td class="text-end">Rp {{ number_format($totalModal, 0, ',', '.') }}</td>
+                                        {{-- [MODIFIKASI] Gunakan 'total_cost' yang sudah dihitung akurat --}}
+                                        <td class="text-end">Rp {{ number_format($sale->total_cost, 0, ',', '.') }}</td>
                                         <td class="text-end fw-bold {{ $totalLaba >= 0 ? 'text-success' : 'text-danger' }}">Rp {{ number_format($totalLaba, 0, ',', '.') }}</td>
                                         <td class="text-end fw-bold">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</td>
                                     </tr>
-                                    {{-- Baris Detail (Collapsible) --}}
                                     <tr x-show="openRow === {{ $sale->id }}" style="display: none;" x-collapse>
-                                        {{-- [MODIFIKASI] Tambahkan colspan menjadi 8 --}}
                                         <td colspan="8" class="p-0">
                                             <div class="p-3 bg-light">
                                                 <h6 class="ms-2">Rincian Produk:</h6>
@@ -158,7 +152,8 @@
                                                     <tbody>
                                                         @foreach($sale->details as $detail)
                                                         @php
-                                                            $modalPerPcs = $detail->product->purchase_price ?? 0;
+                                                            // [MODIFIKASI] Kalkulasi subtotal laba menggunakan HPP historis
+                                                            $modalPerPcs = $detail->purchase_price_at_sale ?? 0;
                                                             $subLaba = ($detail->selling_price_at_transaction - $modalPerPcs) * $detail->quantity;
                                                         @endphp
                                                         <tr>
@@ -175,7 +170,6 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    {{-- [MODIFIKASI] Tambahkan colspan menjadi 8 --}}
                                     <tr><td colspan="8" class="text-center">Tidak ada data penjualan untuk periode ini.</td></tr>
                                 @endforelse
                             </tbody>

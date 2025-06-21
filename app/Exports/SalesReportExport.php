@@ -9,7 +9,6 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Carbon\Carbon;
 
-// [MODIFIKASI] Menggunakan FromQuery untuk efisiensi & WithStrictNullComparison untuk kompatibilitas
 class SalesReportExport implements FromQuery, WithHeadings, WithMapping, WithStrictNullComparison
 {
     protected $startDate;
@@ -25,12 +24,8 @@ class SalesReportExport implements FromQuery, WithHeadings, WithMapping, WithStr
         $this->userId = $userId;
     }
 
-    /**
-    * @return \Illuminate\Database\Query\Builder
-    */
     public function query()
     {
-        // Query langsung ke detail, bukan transaksi induk
         $query = SalesTransactionDetail::with(['transaction.customer', 'transaction.user', 'product'])
             ->whereHas('transaction', function ($q) {
                 $q->where('status', 'Completed');
@@ -49,19 +44,14 @@ class SalesReportExport implements FromQuery, WithHeadings, WithMapping, WithStr
                 }
             });
         
-        // Urutkan berdasarkan tanggal transaksi induknya
         return $query->orderBy(
             \App\Modules\Karung\Models\SalesTransaction::select('transaction_date')
                 ->whereColumn('karung_sales_transactions.id', 'karung_sales_transaction_details.sales_transaction_id')
         );
     }
 
-    /**
-    * @return array
-    */
     public function headings(): array
     {
-        // Header baru untuk format flat file
         return [
             'No. Invoice',
             'Tanggal Transaksi',
@@ -72,7 +62,7 @@ class SalesReportExport implements FromQuery, WithHeadings, WithMapping, WithStr
             'SKU Produk',
             'Nama Produk',
             'Kuantitas',
-            'Harga Modal Satuan',
+            'Harga Modal Satuan (HPP)', // Label diubah untuk kejelasan
             'Harga Jual Satuan',
             'Subtotal Penjualan',
             'Subtotal Laba',
@@ -80,12 +70,12 @@ class SalesReportExport implements FromQuery, WithHeadings, WithMapping, WithStr
     }
 
     /**
-    * @param SalesTransactionDetail $detail
-    */
+     * @param SalesTransactionDetail $detail
+     */
     public function map($detail): array
     {
-        // Mapping data untuk setiap baris detail
-        $modalPerPcs = $detail->product->purchase_price ?? 0;
+        // [MODIFIKASI] Gunakan HPP historis yang akurat
+        $modalPerPcs = $detail->purchase_price_at_sale ?? 0;
         $subLaba = ($detail->selling_price_at_transaction - $modalPerPcs) * $detail->quantity;
 
         return [
@@ -98,10 +88,10 @@ class SalesReportExport implements FromQuery, WithHeadings, WithMapping, WithStr
             $detail->product->sku ?? 'N/A',
             $detail->product->name ?? 'Produk Dihapus',
             $detail->quantity,
-            $modalPerPcs,
+            $modalPerPcs, // Data modal sekarang akurat
             $detail->selling_price_at_transaction,
             $detail->sub_total,
-            $subLaba,
+            $subLaba, // Data laba sekarang akurat
         ];
     }
 }

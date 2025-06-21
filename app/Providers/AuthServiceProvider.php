@@ -12,6 +12,8 @@ use App\Modules\Karung\Models\SalesTransaction; // <-- Tambah ini
 use App\Policies\SalesTransactionPolicy;      // <-- Tambah ini
 use App\Modules\Karung\Models\OperationalExpense;
 use App\Policies\OperationalExpensePolicy;
+use App\Modules\Karung\Models\Product;
+use App\Policies\ProductPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -25,6 +27,7 @@ class AuthServiceProvider extends ServiceProvider
         PurchaseTransaction::class => PurchaseTransactionPolicy::class,
         SalesTransaction::class => SalesTransactionPolicy::class,
         OperationalExpense::class => OperationalExpensePolicy::class,
+        Product::class => ProductPolicy::class,
     ];
 
     /**

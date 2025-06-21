@@ -17,6 +17,16 @@
                             </svg>
                             Kembali
                         </a>
+
+                        {{-- [MODIFIKASI] Tambahkan tombol baru di sini --}}
+                        <a href="{{ route('karung.products.bulk-price.edit') }}" class="btn btn-warning btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-tags-fill" viewBox="0 0 16 16">
+                                <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm4.5-1a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1"/>
+                                <path d="M1.293 7.793A1 1 0 0 1 1 7.086V2a1 1 0 0 0-1 1v4.586a1 1 0 0 0 .293.707l7 7a1 1 0 0 0 1.414 0l.043-.043-7.457-7.457z"/>
+                            </svg>
+                            Update Harga Massal
+                        </a>
+
                         <a href="{{ route('karung.products.create') }}" class="btn btn-light btn-sm"> {{-- Saya ubah dari 'success' ke 'light' agar kontras dengan header gelap --}}
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
                                 <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>

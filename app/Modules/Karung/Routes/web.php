@@ -22,6 +22,8 @@ Route::get('suppliers/{supplier}/history', [SupplierController::class, 'history'
 Route::resource('suppliers', SupplierController::class)->middleware('permission:karung.manage_suppliers');
 Route::get('customers/{customer}/history', [CustomerController::class, 'history'])->name('customers.history')->middleware('permission:karung.view_sales');
 Route::resource('customers', CustomerController::class)->middleware('permission:karung.manage_customers');
+Route::get('products/bulk-price-edit', [ProductController::class, 'bulkPriceEdit'])->name('products.bulk-price.edit')->middleware('permission:karung.manage_products');
+Route::post('products/bulk-price-update', [ProductController::class, 'bulkPriceUpdate'])->name('products.bulk-price.update')->middleware('permission:karung.manage_products');
 
 // [PERBAIKAN] Definisikan route API untuk galeri SEBELUM resource controller produk.
 Route::get('/products/gallery-api', [ProductController::class, 'getProductGallery'])
@@ -50,6 +52,9 @@ Route::resource('sales', SalesTransactionController::class)->middleware('permiss
 Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])->name('sales.cancel');
 Route::post('sales/{sale}/restore', [SalesTransactionController::class, 'restore'])->name('sales.restore');
 Route::post('sales/{sale}/pay', [SalesTransactionController::class, 'updatePayment'])->name('sales.update_payment');
+Route::get('sales/{sale}/print-thermal', [SalesTransactionController::class, 'printThermal'])->name('sales.print.thermal')->middleware('permission:karung.view_sales');
+Route::get('sales/{sale}/download-pdf', [SalesTransactionController::class, 'downloadPdf'])->name('sales.download.pdf')->middleware('permission:karung.view_sales');
+
 
 // Rute Laporan
 Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('reports.')->group(function() {
@@ -69,4 +74,5 @@ Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('
     Route::get('/customer-performance', [ReportController::class, 'customerPerformance'])->name('customer_performance');
     Route::get('/product-performance', [ReportController::class, 'productPerformance'])->name('product_performance');
     Route::get('/cash-flow', [ReportController::class, 'cashFlow'])->name('cash_flow');
+    Route::get('/download/{filename}', [ReportController::class, 'downloadExportedReport'])->name('download');
 });

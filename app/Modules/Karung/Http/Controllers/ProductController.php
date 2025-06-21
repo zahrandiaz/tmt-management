@@ -12,6 +12,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str; // Untuk helper string seperti Str::upper, Str::random
 use Illuminate\Support\Facades\Storage; // <-- PASTIKAN INI ADA
 use Intervention\Image\Laravel\Facades\Image;
+use Illuminate\Support\Facades\Gate; // <-- TAMBAHKAN INI
+use Illuminate\Support\Facades\DB; // <-- TAMBAHKAN INI JUGA
 
 class ProductController extends Controller
 {
@@ -269,5 +271,67 @@ class ProductController extends Controller
         });
 
         return response()->json($products);
+    }
+
+    public function bulkPriceEdit(Request $request)
+    {
+        // [MODIFIKASI] Ganti cara pengecekan otorisasi
+        if (Gate::denies('update', new Product())) {
+            abort(403, 'Anda tidak memiliki izin untuk mengubah data produk.');
+        }
+
+        $categories = ProductCategory::orderBy('name')->get();
+        $selectedCategoryId = $request->input('category_id');
+        
+        $query = Product::query();
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('sku', 'like', '%' . $searchTerm . '%');
+            });
+        }
+        
+        if ($selectedCategoryId) {
+            $query->where('product_category_id', $selectedCategoryId);
+        }
+
+        $products = $query->orderBy('name')->get();
+
+        return view('karung::products.bulk_price_edit', compact('products', 'categories', 'selectedCategoryId'));
+    }
+
+    public function bulkPriceUpdate(Request $request)
+    {
+        // [MODIFIKASI] Ganti cara pengecekan otorisasi
+        if (Gate::denies('update', new Product())) {
+            abort(403, 'Anda tidak memiliki izin untuk mengubah data produk.');
+        }
+
+        $validated = $request->validate([
+            'products' => ['required', 'array'],
+            'products.*' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($validated['products'] as $productId => $newPrice) {
+                Product::where('id', $productId)->update([
+                    'purchase_price' => $newPrice
+                ]);
+            }
+
+            DB::commit();
+            
+            activity()->log("Melakukan pembaruan harga beli massal untuk " . count($validated['products']) . " produk.");
+
+            return redirect()->route('karung.products.bulk-price.edit')->with('success', 'Harga beli produk berhasil diperbarui!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui harga: ' . $e->getMessage())->withInput();
+        }
     }
 }

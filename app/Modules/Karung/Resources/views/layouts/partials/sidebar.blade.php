@@ -1,7 +1,43 @@
 <div class="d-flex flex-column flex-shrink-0 p-3 h-100">
-    {{-- ... (Header sidebar tidak berubah) ... --}}
     <hr>
     <ul class="nav nav-pills flex-column mb-auto">
+        {{-- [MODIFIKASI] Dropdown Notifikasi ditambahkan di sini --}}
+        @auth
+        <li class="nav-item dropdown">
+            <a href="#" class="nav-link text-white dropdown-toggle position-relative" data-bs-toggle="dropdown" aria-expanded="false">
+                <svg class="sidebar-icon me-2" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/>
+                </svg>
+                Notifikasi
+                @if(auth()->user()->unreadNotifications->count() > 0)
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6em;">
+                        {{ auth()->user()->unreadNotifications->count() }}
+                        <span class="visually-hidden">unread messages</span>
+                    </span>
+                @endif
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" style="width: 300px;">
+                @forelse (auth()->user()->unreadNotifications->take(5) as $notification)
+                    <li>
+                        <div class="dropdown-item-text text-white-50 p-2 border-bottom border-secondary">
+                            <p class="mb-1 small">{{ $notification->data['message'] }}</p>
+                            <a href="{{ route('karung.reports.download', ['filename' => $notification->data['file_name']]) }}" class="fw-bold text-white">
+                                Download: {{ Str::limit($notification->data['file_name'], 25) }}
+                            </a>
+                            <div class="text-xs text-white-50 opacity-75 mt-1">
+                                {{ $notification->created_at->diffForHumans() }}
+                            </div>
+                        </div>
+                    </li>
+                @empty
+                    <li><span class="dropdown-item-text text-white-50">Tidak ada notifikasi baru.</span></li>
+                @endforelse
+                 {{-- Di sini nanti bisa ditambahkan link "Lihat Semua" dan "Tandai sudah dibaca" --}}
+            </ul>
+        </li>
+        <hr>
+        @endauth
+
         <li class="nav-item">
             <a href="{{ route('karung.dashboard') }}" class="nav-link text-white {{ request()->routeIs('karung.dashboard') ? 'active' : '' }}">
                 <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#home"/></svg>
@@ -9,6 +45,7 @@
             </a>
         </li>
         
+        {{-- Sisa menu lainnya tidak berubah --}}
         @canany(['karung.view_purchases', 'karung.create_purchases', 'karung.view_sales', 'karung.create_sales'])
         <li>
             <a href="#transaction-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->routeIs('karung.purchases.*') || request()->routeIs('karung.sales.*') ? '' : 'collapsed' }}">
@@ -28,7 +65,6 @@
         </li>
         @endcanany
 
-        {{-- [BARU] Grup Menu Inventaris --}}
         @canany(['karung.manage_products', 'karung.manage_stock_adjustments'])
         <li>
             <a href="#inventory-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*products*') || request()->is('*stock-adjustments*') ? '' : 'collapsed' }}">

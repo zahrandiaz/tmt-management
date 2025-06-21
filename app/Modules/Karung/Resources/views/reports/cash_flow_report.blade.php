@@ -8,7 +8,7 @@
         <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Laporan Arus Kas</h5>
             <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">...</svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/></svg>
                 Kembali ke Dashboard
             </a>
         </div>
@@ -40,7 +40,6 @@
 
             <h5 class="mb-3">Ringkasan Laporan untuk Periode {{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d F Y') : 'Awal' }} s/d {{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d F Y') : 'Akhir' }}</h5>
             
-            {{-- [MODIFIKASI] Tampilan kartu ringkasan --}}
             <div class="row text-center g-3 mt-3">
                 <div class="col-lg-3">
                     <div class="card text-white bg-success h-100">
@@ -75,7 +74,69 @@
                     </div>
                 </div>
             </div>
-            
+
+            {{-- [BARU] Bagian Catatan Transaksi Belum Lunas --}}
+            <div class="mt-5 pt-4 border-top">
+                <h5 class="mb-3 text-muted">Catatan Transaksi di Luar Arus Kas</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Piutang (Penjualan Belum Lunas)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Invoice</th>
+                                        <th>Pelanggan</th>
+                                        <th class="text-end">Sisa Tagihan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($pendingReceivables as $sale)
+                                        <tr>
+                                            <td><a href="{{ route('karung.sales.show', $sale) }}">{{ $sale->invoice_number }}</a></td>
+                                            <td>{{ $sale->customer->name ?? 'N/A' }}</td>
+                                            <td class="text-end text-danger fw-bold">Rp {{ number_format($sale->total_amount - $sale->amount_paid, 0, ',', '.') }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Tidak ada piutang pada periode ini.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Utang (Pembelian Belum Lunas)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Kode Pembelian</th>
+                                        <th>Supplier</th>
+                                        <th class="text-end">Sisa Utang</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($pendingPayables as $purchase)
+                                        <tr>
+                                            <td><a href="{{ route('karung.purchases.show', $purchase) }}">{{ $purchase->purchase_code }}</a></td>
+                                            <td>{{ $purchase->supplier->name ?? 'N/A' }}</td>
+                                            <td class="text-end text-danger fw-bold">Rp {{ number_format($purchase->total_amount - $purchase->amount_paid, 0, ',', '.') }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Tidak ada utang pada periode ini.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{-- Akhir Bagian Catatan --}}
+
         </div>
     </div>
 </div>

@@ -23,6 +23,8 @@ use App\Modules\Karung\Models\PurchaseTransactionDetail;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Karung\Models\OperationalExpense;
+use Illuminate\Support\Facades\Storage;
+use App\Jobs\ExportSalesReportJob;
 
 class ReportController extends Controller
 {
@@ -79,22 +81,29 @@ class ReportController extends Controller
         $selectedCustomerId = $request->input('customer_id');
         $selectedUserId = $request->input('user_id');
 
-        $query = SalesTransaction::with(['customer', 'user', 'details.product'])
-                                     ->where('status', 'Completed');
+        // [MODIFIKASI] Query utama dengan kalkulasi HPP Akurat
+        $query = SalesTransaction::with(['customer', 'user', 'details'])
+            ->withSum('details as total_cost', DB::raw('quantity * purchase_price_at_sale')) // Kalkulasi HPP akurat di database
+            ->where('status', 'Completed');
 
         if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $query->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         if ($selectedCustomerId) { $query->where('customer_id', $selectedCustomerId); }
         if ($selectedUserId) { $query->where('user_id', $selectedUserId); }
 
+        // [MODIFIKASI] Kalkulasi total ringkasan menjadi lebih efisien
         $queryForTotals = clone $query;
-        $totalTransactions = $queryForTotals->count();
-        $totalRevenue = $queryForTotals->sum('total_amount');
-
-        $allSalesDetails = $queryForTotals->with('details.product')->get()->pluck('details')->flatten();
-        $totalCost = $allSalesDetails->reduce(fn ($c, $d) => $c + (($d->product->purchase_price ?? 0) * $d->quantity), 0);
+        $summary = $queryForTotals->select(
+                DB::raw('COUNT(*) as total_transactions'),
+                DB::raw('SUM(total_amount) as total_revenue'),
+                DB::raw('SUM((SELECT SUM(quantity * purchase_price_at_sale) FROM karung_sales_transaction_details WHERE sales_transaction_id = karung_sales_transactions.id)) as total_cost')
+            )->first();
+            
+        $totalTransactions = $summary->total_transactions ?? 0;
+        $totalRevenue = $summary->total_revenue ?? 0;
+        $totalCost = $summary->total_cost ?? 0;
         $grossProfit = $totalRevenue - $totalCost;
-
+        
         $sales = $query->latest('transaction_date')->paginate(10);
         $customers = Customer::orderBy('name')->get();
         $users = User::role(['Super Admin TMT', 'Admin Modul Karung', 'Staff Modul Karung'])->orderBy('name')->get();
@@ -113,10 +122,12 @@ class ReportController extends Controller
         $customerId = $request->input('customer_id');
         $userId = $request->input('user_id');
         
-        $fileName = 'Laporan_Penjualan_Detail_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
+        // [MODIFIKASI] Kirim data user yang sedang login ke dalam Job
+        ExportSalesReportJob::dispatch(auth()->user(), $startDate, $endDate, $customerId, $userId);
 
-        return Excel::download(new SalesReportExport($startDate, $endDate, $customerId, $userId), $fileName);
+        return redirect()->back()->with('success', 'Laporan Anda sedang diproses. Anda akan diberi notifikasi jika sudah selesai.');
     }
+
 
     /**
      * [BARU] Method untuk menangani permintaan export laporan penjualan ke PDF.
@@ -128,7 +139,10 @@ class ReportController extends Controller
         $customerId = $request->input('customer_id');
         $userId = $request->input('user_id');
 
-        $query = SalesTransaction::with(['customer', 'user', 'details.product'])->where('status', 'Completed');
+        // [MODIFIKASI] Query PDF juga menggunakan kalkulasi HPP Akurat
+        $query = SalesTransaction::with(['customer', 'user', 'details'])
+            ->withSum('details as total_cost', DB::raw('quantity * purchase_price_at_sale')) // Kalkulasi HPP akurat di database
+            ->where('status', 'Completed');
 
         if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $query->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
@@ -137,10 +151,9 @@ class ReportController extends Controller
 
         $sales = $query->latest('transaction_date')->get();
         
+        // [MODIFIKASI] Kalkulasi ringkasan untuk PDF
         $totalRevenue = $sales->sum('total_amount');
-        $totalCost = $sales->pluck('details')->flatten()->reduce(function ($carry, $detail) {
-            return $carry + (($detail->product->purchase_price ?? 0) * $detail->quantity);
-        }, 0);
+        $totalCost = $sales->sum('total_cost'); // Ambil dari hasil withSum
         $grossProfit = $totalRevenue - $totalCost;
         
         $pdf = PDF::loadView('karung::reports.pdf.sales_report_pdf', compact('sales', 'totalRevenue', 'totalCost', 'grossProfit', 'startDate', 'endDate'));
@@ -476,16 +489,19 @@ class ReportController extends Controller
         $endDate = $dateRange['endDate'];
         $activePreset = $dateRange['activePreset'];
 
+        // Menghitung Pemasukan dari Penjualan (sudah benar)
         $salesQuery = SalesTransaction::where('status', 'Completed');
         if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         $totalIncome = $salesQuery->sum('amount_paid');
 
+        // [FIX] Menghitung Pengeluaran dari Pembelian (sekarang sudah akurat)
         $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
         if ($startDate) { $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         $purchaseExpense = $purchaseQuery->sum('amount_paid');
         
+        // Menghitung Biaya Operasional (sudah benar)
         $operationalExpenseQuery = OperationalExpense::query();
         if ($startDate) { $operationalExpenseQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $operationalExpenseQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
@@ -494,9 +510,40 @@ class ReportController extends Controller
         $totalExpense = $purchaseExpense + $operationalExpense;
         $netCashFlow = $totalIncome - $totalExpense;
 
+        // [BARU] Mengambil data Piutang (Penjualan Belum Lunas)
+        $receivablesQuery = SalesTransaction::where('status', 'Completed')
+            ->where('payment_status', 'Belum Lunas');
+        if ($startDate) { $receivablesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $receivablesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        $pendingReceivables = $receivablesQuery->with('customer')->get();
+
+        // [BARU] Mengambil data Utang (Pembelian Belum Lunas)
+        $payablesQuery = PurchaseTransaction::where('status', 'Completed')
+            ->where('payment_status', 'Belum Lunas');
+        if ($startDate) { $payablesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
+        if ($endDate) { $payablesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        $pendingPayables = $payablesQuery->with('supplier')->get();
+
+
         return view('karung::reports.cash_flow_report', compact(
             'totalIncome', 'purchaseExpense', 'operationalExpense', 
-            'netCashFlow', 'startDate', 'endDate', 'activePreset'
+            'netCashFlow', 'startDate', 'endDate', 'activePreset',
+            'pendingReceivables', 'pendingPayables' // <-- [BARU] Kirim data baru ke view
         ));
+    }
+
+    public function downloadExportedReport($filename)
+    {
+        // Tentukan path file di dalam storage
+        $path = 'public/report_exports/' . $filename;
+
+        // Pastikan file ada dan pengguna yang meminta adalah pemilik file (opsional, untuk keamanan tambahan)
+        // Untuk sekarang, kita hanya cek keberadaan file
+        if (!Storage::exists($path)) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        // Kembalikan file sebagai download
+        return Storage::download($path);
     }
  }
