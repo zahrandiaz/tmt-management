@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\DB;
 use App\Modules\Karung\Models\OperationalExpense;
 use Illuminate\Support\Facades\Storage;
 use App\Jobs\ExportSalesReportJob;
+use App\Models\ExportedReport;
 
 class ReportController extends Controller
 {
@@ -530,6 +531,17 @@ class ReportController extends Controller
             'netCashFlow', 'startDate', 'endDate', 'activePreset',
             'pendingReceivables', 'pendingPayables' // <-- [BARU] Kirim data baru ke view
         ));
+    }
+
+    public function downloadCenter()
+    {
+        $this->authorize('viewAny', SalesTransaction::class); // Ganti dengan otorisasi yang sesuai jika perlu
+
+        $exportedReports = ExportedReport::where('user_id', auth()->id())
+                                         ->latest()
+                                         ->paginate(15);
+
+        return view('karung::reports.download_center', compact('exportedReports'));
     }
 
     public function downloadExportedReport($filename)

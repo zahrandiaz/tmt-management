@@ -10,8 +10,9 @@ use Illuminate\Queue\SerializesModels;
 use App\Exports\SalesReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
-use App\Models\User; // <-- Import User model
-use App\Notifications\ReportExportedNotification; // <-- Import Notifikasi kita
+use App\Models\User;
+use App\Notifications\ReportExportedNotification;
+use App\Models\ExportedReport; // <-- [MODIFIKASI] Import model baru kita
 
 class ExportSalesReportJob implements ShouldQueue
 {
@@ -25,7 +26,6 @@ class ExportSalesReportJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * [MODIFIKASI] Menerima objek User
      */
     public function __construct(User $user, $startDate, $endDate, $customerId, $userId)
     {
@@ -41,7 +41,11 @@ class ExportSalesReportJob implements ShouldQueue
      */
     public function handle(): void
     {
+        // 1. Buat nama file yang unik
         $fileName = 'Laporan_Penjualan_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
+        $filePath = 'public/report_exports/' . $fileName;
+
+        // 2. Buat objek export
         $export = new SalesReportExport(
             $this->startDate,
             $this->endDate,
@@ -49,9 +53,18 @@ class ExportSalesReportJob implements ShouldQueue
             $this->userId
         );
         
-        Excel::store($export, 'public/report_exports/' . $fileName);
+        // 3. Simpan file ke storage
+        Excel::store($export, $filePath);
 
-        // [MODIFIKASI] Kirim notifikasi ke pengguna yang meminta laporan
+        // 4. [BARU] Simpan catatan ke database
+        ExportedReport::create([
+            'user_id'  => $this->user->id,
+            'filename' => $fileName,
+            'path'     => $filePath,
+            'disk'     => 'public', // Menggunakan disk 'public'
+        ]);
+
+        // 5. Kirim notifikasi ke pengguna (tetap ada)
         $this->user->notify(new ReportExportedNotification($fileName));
     }
 }

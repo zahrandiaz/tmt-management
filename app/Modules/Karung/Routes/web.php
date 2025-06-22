@@ -11,6 +11,9 @@ use App\Modules\Karung\Http\Controllers\PurchaseTransactionController;
 use App\Modules\Karung\Http\Controllers\SalesTransactionController;
 use App\Modules\Karung\Http\Controllers\ReportController;
 use App\Modules\Karung\Http\Controllers\StockAdjustmentController;
+use App\Modules\Karung\Http\Controllers\NotificationController;
+
+
 
 // Rute Dashboard
 Route::get('/dashboard-modul', [DashboardController::class, 'index'])->name('dashboard')->middleware('permission:karung.access_module');
@@ -75,4 +78,7 @@ Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('
     Route::get('/product-performance', [ReportController::class, 'productPerformance'])->name('product_performance');
     Route::get('/cash-flow', [ReportController::class, 'cashFlow'])->name('cash_flow');
     Route::get('/download/{filename}', [ReportController::class, 'downloadExportedReport'])->name('download');
+    Route::get('/pusat-unduhan', [ReportController::class, 'downloadCenter'])->name('download_center');
 });
+
+Route::post('/notifications/{notificationId}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notification.markAsRead')->middleware('auth');
