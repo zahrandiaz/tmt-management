@@ -26,6 +26,7 @@ use App\Modules\Karung\Models\OperationalExpense;
 use Illuminate\Support\Facades\Storage;
 use App\Jobs\ExportSalesReportJob;
 use App\Models\ExportedReport;
+use App\Modules\Karung\Models\Setting;
 
 class ReportController extends Controller
 {
@@ -135,6 +136,7 @@ class ReportController extends Controller
      */
     public function exportSalesPdf(Request $request)
     {
+        $settings = Setting::pluck('setting_value', 'setting_key');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $customerId = $request->input('customer_id');
@@ -157,7 +159,7 @@ class ReportController extends Controller
         $totalCost = $sales->sum('total_cost'); // Ambil dari hasil withSum
         $grossProfit = $totalRevenue - $totalCost;
         
-        $pdf = PDF::loadView('karung::reports.pdf.sales_report_pdf', compact('sales', 'totalRevenue', 'totalCost', 'grossProfit', 'startDate', 'endDate'));
+        $pdf = PDF::loadView('karung::reports.pdf.sales_report_pdf', compact('sales', 'totalRevenue', 'totalCost', 'grossProfit', 'startDate', 'endDate', 'settings'));
         $fileName = 'Laporan_Penjualan_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
@@ -202,6 +204,7 @@ class ReportController extends Controller
 
     public function exportPurchasesPdf(Request $request)
     {
+        $settings = Setting::pluck('setting_value', 'setting_key');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $supplierId = $request->input('supplier_id'); // [BARU] Ambil filter supplier
@@ -215,7 +218,7 @@ class ReportController extends Controller
         $purchases = $query->latest('transaction_date')->get();
         $totalPembelian = $query->sum('total_amount');
 
-        $pdf = PDF::loadView('karung::reports.pdf.purchases_report_pdf', compact('purchases', 'totalPembelian', 'startDate', 'endDate'));
+        $pdf = PDF::loadView('karung::reports.pdf.purchases_report_pdf', compact('purchases', 'totalPembelian', 'startDate', 'endDate', 'settings'));
         $fileName = 'Laporan_Pembelian_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
@@ -245,6 +248,7 @@ class ReportController extends Controller
 
     public function exportStockPdf(Request $request) // <-- Tambahkan Request
     {
+        $settings = Setting::pluck('setting_value', 'setting_key');
         $categoryId = $request->input('category_id');
         
         $query = Product::with(['category', 'type']);
@@ -253,7 +257,7 @@ class ReportController extends Controller
         }
         $products = $query->orderBy('name')->get();
         
-        $pdf = PDF::loadView('karung::reports.pdf.stock_report_pdf', compact('products'));
+        $pdf = PDF::loadView('karung::reports.pdf.stock_report_pdf', compact('products', 'settings'));
         $fileName = 'Laporan_Stok_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
@@ -352,6 +356,7 @@ class ReportController extends Controller
 
     public function exportProfitLossPdf(Request $request)
     {
+        $settings = Setting::pluck('setting_value', 'setting_key');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
@@ -386,7 +391,7 @@ class ReportController extends Controller
                 return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
             })->sortByDesc('total_profit');
 
-        $pdf = PDF::loadView('karung::reports.pdf.profit_loss_report_pdf', compact('totalRevenue', 'totalCost', 'grossProfit', 'profitByCategory', 'salesDetails', 'totalExpenses', 'expensesDetails', 'netProfit', 'startDate', 'endDate'));
+        $pdf = PDF::loadView('karung::reports.pdf.profit_loss_report_pdf', compact('totalRevenue', 'totalCost', 'grossProfit', 'profitByCategory', 'salesDetails', 'totalExpenses', 'expensesDetails', 'netProfit', 'startDate', 'endDate', 'settings'));
         $fileName = 'Laporan_Laba_Rugi_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
@@ -557,5 +562,26 @@ class ReportController extends Controller
 
         // Kembalikan file sebagai download
         return Storage::download($path);
+    }
+
+    /**
+     * [BARU] Menghapus file laporan yang diekspor dan catatannya.
+     */
+    public function destroyExportedReport(ExportedReport $report)
+    {
+        try {
+            // Hapus file fisik dari storage terlebih dahulu
+            if (Storage::disk($report->disk)->exists($report->path)) {
+                Storage::disk($report->disk)->delete($report->path);
+            }
+
+            // Hapus catatan dari database
+            $report->delete();
+
+            return redirect()->route('karung.reports.download_center')->with('success', 'File laporan berhasil dihapus.');
+
+        } catch (\Exception $e) {
+            return redirect()->route('karung.reports.download_center')->with('error', 'Gagal menghapus file laporan: ' . $e->getMessage());
+        }
     }
  }

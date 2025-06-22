@@ -15,8 +15,7 @@
     </style>
 </head>
 <body>
-    <h1>Laporan Stok Produk</h1>
-    <p>Dicetak pada: {{ \Carbon\Carbon::now()->format('d M Y, H:i') }}</p>
+    @include('karung::reports.pdf.partials.header', ['title' => 'Laporan Stok Produk'])
     <hr>
     <table class="table">
         <thead>

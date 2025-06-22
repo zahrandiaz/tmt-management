@@ -1,8 +1,7 @@
 <!doctype html>
-{{-- [PERBAIKAN] Tambahkan class d-flex flex-column untuk struktur dasar yang benar --}}
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-100 d-flex flex-column">
 <head>
-    <meta charset="utf-8">
+        <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Laravel') }} - @yield('title', 'Dashboard')</title>
@@ -13,11 +12,10 @@
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 
     <style>
-        /* [PERBAIKAN] Sederhanakan CSS, andalkan class Bootstrap */
         body { height: 100%; }
         .sidebar-icon { fill: currentColor; }
         @media print {
-            body > #tmt_app > nav, .offcanvas, footer, .no-print { display: none !important; }
+            body > #tmt_app > nav, .offcanvas, footer, .no-print, .floating-notification-widget { display: none !important; }
             body, main, .content-wrapper, .card, .card-body { background-color: white !important; padding: 0 !important; margin: 0 !important; border: none !important; box-shadow: none !important; }
             .card-header { text-align: center !important; background-color: transparent !important; color: black !important; border-bottom: 1px solid #ddd !important; padding-bottom: 10px !important; }
             .table { font-size: 11px; color: black !important; }
@@ -27,9 +25,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     @stack('head-scripts')
 </head>
-{{-- [PERBAIKAN] Body juga harus menjadi flex container --}}
 <body class="d-flex flex-column h-100">
-    {{-- [PERBAIKAN] div#tmt_app sekarang menjadi flex-grow-1 --}}
     <div id="tmt_app" class="d-flex flex-column flex-grow-1">
         <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
             <div class="container-fluid">
@@ -45,7 +41,6 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    {{-- Menu items tidak berubah --}}
                     <ul class="navbar-nav me-auto">
                         @auth
                             <li class="nav-item"><a class="nav-link" href="{{ route('dashboard') }}">Dashboard TMT</a></li>
@@ -77,14 +72,14 @@
                 </div>
             </div>
         </nav>
-
-        {{-- [PERBAIKAN] Main sekarang menjadi container flex yang tumbuh dan menyembunyikan overflow --}}
         <main class="d-flex flex-grow-1" style="overflow: hidden;">
             @yield('content')
         </main>
     </div>
     
-    {{-- Script tidak berubah --}}
+    {{-- HAPUS INCLUDE NOTIFIKASI DARI SINI --}}
+    
+    {{-- ... semua script tidak berubah ... --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>

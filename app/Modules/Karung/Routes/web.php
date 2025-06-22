@@ -81,4 +81,10 @@ Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('
     Route::get('/pusat-unduhan', [ReportController::class, 'downloadCenter'])->name('download_center');
 });
 
+// [MODIFIKASI] Tambahkan rute ini untuk aksi hapus
+Route::delete('/reports/download-center/{report}', [ReportController::class, 'destroyExportedReport'])
+    ->name('reports.download_center.destroy')
+    ->middleware('role:Super Admin TMT');
+
+Route::get('/notifications/latest', [NotificationController::class, 'getLatest'])->name('notifications.latest')->middleware('auth');
 Route::post('/notifications/{notificationId}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notification.markAsRead')->middleware('auth');

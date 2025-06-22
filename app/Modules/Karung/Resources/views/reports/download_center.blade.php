@@ -11,7 +11,8 @@
                     <h5 class="mb-0">Pusat Unduhan Laporan</h5>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Di sini Anda dapat menemukan riwayat semua laporan yang telah Anda ekspor. File akan tersedia untuk diunduh selama beberapa waktu.</p>
+                    @include('karung::components.flash-message')
+                    <p class="text-muted">Di sini Anda dapat menemukan riwayat semua laporan yang telah Anda ekspor. File akan dihapus secara otomatis setelah 30 hari.</p>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover table-bordered">
                             <thead class="table-dark">
@@ -33,6 +34,14 @@
                                             <a href="{{ route('karung.reports.download', ['filename' => $report->filename]) }}" class="btn btn-success btn-sm">
                                                 Download
                                             </a>
+                                            {{-- [MODIFIKASI] Tombol Hapus hanya untuk Super Admin --}}
+                                            @role('Super Admin TMT')
+                                            <form action="{{ route('karung.reports.download_center.destroy', $report->id) }}" method="POST" class="d-inline delete-form">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                                            </form>
+                                            @endrole
                                         </td>
                                     </tr>
                                 @empty
@@ -53,3 +62,31 @@
     </div>
 </div>
 @endsection
+
+@push('footer-scripts')
+<script>
+    // Script konfirmasi hapus dengan SweetAlert2
+    document.addEventListener('DOMContentLoaded', function () {
+        const deleteForms = document.querySelectorAll('.delete-form');
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                Swal.fire({
+                    title: 'Anda yakin?',
+                    text: "File laporan dan catatannya akan dihapus secara permanen!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+    });
+</script>
+@endpush

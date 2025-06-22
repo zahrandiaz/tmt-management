@@ -19,8 +19,7 @@
     </style>
 </head>
 <body>
-    <h1>Laporan Laba Bersih</h1>
-    <p style="text-align:center; margin-top:0;">Periode: {{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d M Y') : 'Semua' }} - {{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d M Y') : 'Semua' }}</p>
+    @include('karung::reports.pdf.partials.header', ['title' => 'Laporan Laba Bersih'])
     
     <h3>Ringkasan Keuangan</h3>
     <table class="table">

@@ -7,47 +7,30 @@
     <symbol id="table" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm15 2h-4v3h4zm-5 0H6v3h4zm-5 0H1v3h4zm10 4H1v3h14zm-5 0H6v3h4zm-5 0H1v3h4z"/></symbol>
     <symbol id="grid" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zM2.5 10a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zM9 2.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zM10.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zM9 10.5A1.5 1.5 0 0 1 10.5 9h3A1.5 1.5 0 0 1 15 10.5v3A1.5 1.5 0 0 1 13.5 15h-3A1.5 1.5 0 0 1 9 13.5zM10.5 10a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></symbol>
     <symbol id="cash-coin" viewBox="0 0 16 16"><path d="M11 5a2 2 0 1 0-4 0 2 2 0 0 0 4 0z"/><path d="M4 8a.5.5 0 0 1 .5-.5h.755A3.5 3.5 0 0 1 13 8c0 .637-.167 1.233-.459 1.75H13.5a.5.5 0 0 1 0 1H11a.5.5 0 0 1-.5-.5v-1.5a.5.5 0 0 1 1 0v.538a2.5 2.5 0 1 0-3.813-3.004l-.34.682a.5.5 0 0 1-.447.278H4.5A.5.5 0 0 1 4 8z"/><path d="M16 8a8 8 0 1 1-16 0 8 8 0 0 1 16 0zM1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8z"/></symbol>
-
 </svg>
 
-{{-- [MODIFIKASI] Hapus x-data dari sini untuk memperbaiki layout --}}
 <div class="d-flex flex-grow-1 w-100">
     <div class="offcanvas-lg offcanvas-start bg-dark text-white flex-shrink-0" tabindex="-1" id="moduleSidebar" aria-labelledby="moduleSidebarLabel" style="width: 280px;">
-        <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title" id="moduleSidebarLabel">Menu Toko Karung</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#moduleSidebar" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body p-0">
-            @include('karung::layouts.partials.sidebar')
-        </div>
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title" id="moduleSidebarLabel">Menu Toko Karung</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#moduleSidebar" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body p-0">
+        @include('karung::layouts.partials.sidebar')
+      </div>
     </div>
 
-    <div class="d-flex flex-column flex-grow-1" style="min-width: 0;"> 
+    <div class="d-flex flex-column flex-grow-1" style="min-width: 0;">
         <div class="flex-grow-1" style="overflow-y: auto;">
             <div class="p-3">
-                {{-- [MODIFIKASI] Kita pindahkan x-data ke pembungkus baru di sini --}}
-                <div x-data="notificationHandler()">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <nav aria-label="breadcrumb" class="d-none d-lg-block">
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard TMT</a></li>
-                                <li class="breadcrumb-item"><a href="{{ route('karung.dashboard') }}">Modul Toko Karung</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">@yield('title')</li>
-                            </ol>
-                        </nav>
-                        <h5 class="mb-0 d-lg-none">@yield('title')</h5>
-
-                        {{-- Komponen notifikasi KHUSUS MOBILE kini berada di dalam scope x-data --}}
-                        <div class="d-lg-none ms-auto">
-                            @include('karung::components.mobile-header-notifications')
-                        </div>
-                    </div>
-
-                    @yield('module-content')
-
-                    {{-- Komponen notifikasi melayang KHUSUS DESKTOP juga berada di dalam scope x-data --}}
-                    @include('karung::components.floating-notifications')
-                </div>
+                <nav aria-label="breadcrumb" class="mb-3 d-none d-lg-block">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard TMT</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('karung.dashboard') }}">Modul Toko Karung</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">@yield('title')</li>
+                    </ol>
+                </nav>
+                @yield('module-content')
             </div>
         </div>
 
@@ -57,39 +40,3 @@
     </div>
 </div>
 @endsection
-
-@push('footer-scripts')
-<script>
-    function notificationHandler() {
-        return {
-            open: false,
-            notifications: @json(auth()->user()->unreadNotifications),
-            notificationCount: {{ auth()->user()->unreadNotifications->count() }},
-            markAsRead(notification, index) {
-                const urlTemplate = '{{ route('karung.notification.markAsRead', ['notificationId' => 'NOTIFICATION_ID']) }}';
-                const finalUrl = urlTemplate.replace('NOTIFICATION_ID', notification.id);
-                
-                fetch(finalUrl, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        this.notifications.splice(index, 1);
-                        this.notificationCount--;
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-            }
-        }
-    }
-</script>
-@endpush

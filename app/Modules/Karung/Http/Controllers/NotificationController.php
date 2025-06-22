@@ -8,6 +8,13 @@ use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
+    public function getLatest()
+    {
+        return response()->json(
+            Auth::user()->unreadNotifications
+        );
+    }
+    
     /**
      * Menandai notifikasi sebagai sudah dibaca.
      */
