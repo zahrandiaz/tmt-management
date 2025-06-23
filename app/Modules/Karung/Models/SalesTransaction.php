@@ -5,6 +5,7 @@ namespace App\Modules\Karung\Models;
 use App\Models\User; // Menggunakan model User global
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str; // <-- [TAMBAHKAN]
 
 class SalesTransaction extends Model
 {
@@ -23,6 +24,7 @@ class SalesTransaction extends Model
         'payment_method',
         'payment_status',
         'amount_paid',
+        'uuid',
     ];
 
     /**
@@ -33,6 +35,19 @@ class SalesTransaction extends Model
     protected $casts = [
         'transaction_date' => 'datetime',
     ];
+
+    /**
+     * [BARU v1.27] Boot the model to attach creating event.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = Str::uuid()->toString();
+            }
+        });
+    }
 
     /**
      * Relasi ke detail penjualan (satu transaksi memiliki banyak detail).
@@ -61,5 +76,10 @@ class SalesTransaction extends Model
     public function operationalExpenses()
     {
         return $this->hasMany(OperationalExpense::class, 'sales_transaction_id');
+    }
+
+    public function returns()
+    {
+        return $this->hasMany(SalesReturn::class, 'sales_transaction_id');
     }
 }

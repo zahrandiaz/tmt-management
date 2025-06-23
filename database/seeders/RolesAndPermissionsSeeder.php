@@ -41,7 +41,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.cancel_sales',
             'karung.edit_sales',
             'karung.delete_sales',
-
+            
+            // [BARU v1.27] Permission untuk retur
+            'karung.manage_returns',
             // [BARU] Permission untuk update pembayaran
             'karung.manage_payments',
 
@@ -85,6 +87,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'karung.manage_expenses',
             'karung.manage_stock_adjustments',
             'karung.edit_historical_hpp',
+            'karung.manage_returns', // <-- [TAMBAHKAN DI SINI]
         ]);
         $this->command->info("Permissions untuk 'Admin Modul Karung' telah ditetapkan.");
 

@@ -81,6 +81,24 @@ Route::middleware(['permission:karung.view_reports'])->prefix('reports')->name('
     Route::get('/pusat-unduhan', [ReportController::class, 'downloadCenter'])->name('download_center');
 });
 
+// [BARU v1.27] Rute Manajemen Finansial (Utang & Piutang)
+Route::middleware(['permission:karung.manage_payments'])->prefix('financials')->name('financials.')->group(function() {
+    Route::get('/receivables', [\App\Modules\Karung\Http\Controllers\FinancialManagementController::class, 'receivables'])->name('receivables');
+    Route::get('/payables', [\App\Modules\Karung\Http\Controllers\FinancialManagementController::class, 'payables'])->name('payables');
+    Route::post('/payments', [\App\Modules\Karung\Http\Controllers\FinancialManagementController::class, 'storePayment'])->name('payments.store');
+    Route::get('/history/{type}/{id}', [\App\Modules\Karung\Http\Controllers\FinancialManagementController::class, 'paymentHistory'])->name('payments.history');
+});
+
+// [BARU v1.27] Rute Manajemen Retur
+Route::middleware(['permission:karung.manage_returns'])->prefix('returns')->name('returns.')->group(function() {
+    // Rute untuk Retur Penjualan
+    Route::get('/sales', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'salesReturnIndex'])->name('sales.index');
+    Route::get('/sales/{salesReturn}', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'showSalesReturn'])->name('sales.show');
+});
+// Rute untuk membuat retur butuh diletakkan di luar grup karena parameternya berbeda
+Route::get('/sales/{salesTransaction}/returns/create', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'createSalesReturn'])->name('sales.returns.create')->middleware('permission:karung.manage_returns');
+Route::post('/sales/{salesTransaction}/returns', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'storeSalesReturn'])->name('sales.returns.store')->middleware('permission:karung.manage_returns');
+
 // [MODIFIKASI] Tambahkan rute ini untuk aksi hapus
 Route::delete('/reports/download-center/{report}', [ReportController::class, 'destroyExportedReport'])
     ->name('reports.download_center.destroy')

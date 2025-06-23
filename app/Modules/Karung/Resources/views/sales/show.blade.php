@@ -10,6 +10,20 @@
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Detail Transaksi Penjualan: #{{ $sale->invoice_number }}</h5>
                     <div class="no-print">
+                        <a href="{{ route('karung.sales.index') }}" class="btn btn-secondary btn-sm">
+                            &larr; Kembali ke Daftar
+                        </a>
+
+                        {{-- [MODIFIKASI v1.27] Tambahkan tombol Buat Retur --}}
+                        @can('karung.manage_returns')
+                            @if($sale->status == 'Completed')
+                                <a href="{{ route('karung.sales.returns.create', $sale->id) }}" class="btn btn-warning btn-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0z"/><path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708z"/></svg>
+                                    Buat Retur
+                                </a>
+                            @endif
+                        @endcan
+
                         <a href="{{ route('karung.sales.print.thermal', $sale) }}" target="_blank" class="btn btn-light btn-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer-fill me-1" viewBox="0 0 16 16"><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4zm1 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-1 2a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1z"/></svg>
                             Cetak Struk (58mm)
@@ -17,14 +31,6 @@
                         <a href="{{ route('karung.sales.download.pdf', $sale) }}" class="btn btn-danger btn-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill me-1" viewBox="0 0 16 16"><path d="M5.523 12.424q.21-.124.459-.238a8 8 0 0 1-.45.606c-.28.337-.498.516-.635.572a.27.27 0 0 1-.035.012.28.28 0 0 1-.031-.023c-.075-.041-.158-.1-.218-.17a.85.85 0 0 1-.135-.37c-.014-.042-.027-.102-.038-.172a.21.21 0 0 1 .035-.145c.022-.02.05-.038.083-.051a.2.2 0 0 1 .051-.028.2.2 0 0 1 .068.004q.032.007.07.02z"/><path fill-rule="evenodd" d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2m5.5 1.5v2a1 1 0 0 0 1 1h2zM.5 11.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/></svg>
                             Download PDF
-                        </a>
-
-                        @if($sale->status == 'Completed')
-                            {{-- Tombol Edit, Batalkan, Hapus tetap ada di sini --}}
-                        @endif
-
-                        <a href="{{ route('karung.sales.index') }}" class="btn btn-outline-light btn-sm">
-                            &larr; Kembali ke Daftar Penjualan
                         </a>
                     </div>
                 </div>

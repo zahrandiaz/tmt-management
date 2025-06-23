@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Modules\Karung\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class SalesTransactionController extends Controller
 {
@@ -29,8 +30,8 @@ class SalesTransactionController extends Controller
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('invoice_number', 'like', '%' . $searchTerm . '%')
                   ->orWhereHas('customer', function ($customerQuery) use ($searchTerm) {
-                      $customerQuery->where('name', 'like', '%' . $searchTerm . '%');
-                  });
+                        $customerQuery->where('name', 'like', '%' . $searchTerm . '%');
+                    });
             });
         }
         $sales = $query->latest()->paginate(15);
@@ -42,10 +43,9 @@ class SalesTransactionController extends Controller
     {
         $this->authorize('create', SalesTransaction::class);
         $customers = Customer::orderBy('name', 'asc')->get();
-        // [MODIFIKASI] Tambahkan ->where('stock', '>', 0)
         $products = Product::where('is_active', true)
-                           ->where('stock', '>', 0)
-                           ->orderBy('name', 'asc')->get();
+                            ->where('stock', '>', 0)
+                            ->orderBy('name', 'asc')->get();
         return view('karung::sales.create', compact('customers', 'products'));
     }
 
@@ -112,15 +112,13 @@ class SalesTransactionController extends Controller
                 ]);
             }
 
-            // [BARU] Logika untuk menyimpan biaya operasional terkait
             if ($request->filled('related_expense_amount') && $request->filled('related_expense_description')) {
-                // Gunakan relasi yang sudah kita buat di Model
                 $sale->operationalExpenses()->create([
                     'business_unit_id' => $sale->business_unit_id,
-                    'date' => $sale->transaction_date, // Gunakan tanggal transaksi sebagai tanggal biaya
+                    'date' => $sale->transaction_date,
                     'description' => $request->input('related_expense_description'),
                     'amount' => $request->input('related_expense_amount'),
-                    'category' => 'Biaya Transaksi Penjualan', // Kategori default
+                    'category' => 'Biaya Transaksi Penjualan',
                     'user_id' => auth()->id(),
                 ]);
             }
@@ -149,7 +147,6 @@ class SalesTransactionController extends Controller
     public function edit(SalesTransaction $sale)
     {
         $this->authorize('update', $sale);
-        // [MODIFIKASI] Eager load relasi operationalExpenses
         $sale->load(['details.product', 'operationalExpenses']);
         $customers = Customer::orderBy('name', 'asc')->get();
         
@@ -171,7 +168,6 @@ class SalesTransactionController extends Controller
         try {
             DB::beginTransaction();
             
-            // ... Logika penyesuaian stok dan kalkulasi ulang total tidak berubah ...
             $stockService->handleSaleUpdate($sale, $validatedData['details']);
             
             $newTotalAmount = collect($validatedData['details'])->sum(function ($detail) {
@@ -193,27 +189,24 @@ class SalesTransactionController extends Controller
                 'amount_paid'      => $amountPaid,
             ]);
             
-            // ... Logika hapus dan buat ulang detail tidak berubah ...
             $sale->details()->delete();
             foreach ($validatedData['details'] as $newDetail) {
                  $sale->details()->create([
-                    'product_id'                     => $newDetail['product_id'],
-                    'quantity'                       => $newDetail['quantity'],
-                    'selling_price_at_transaction'   => $newDetail['selling_price_at_transaction'],
-                    'purchase_price_at_sale'         => $newDetail['purchase_price_at_sale'], 
-                    'sub_total'                      => $newDetail['quantity'] * $newDetail['selling_price_at_transaction'],
+                    'product_id'                 => $newDetail['product_id'],
+                    'quantity'                   => $newDetail['quantity'],
+                    'selling_price_at_transaction' => $newDetail['selling_price_at_transaction'],
+                    'purchase_price_at_sale'     => $newDetail['purchase_price_at_sale'], 
+                    'sub_total'                  => $newDetail['quantity'] * $newDetail['selling_price_at_transaction'],
                 ]);
             }
 
-            // [MODIFIKASI] Logika untuk menangani biaya operasional terkait
             $relatedExpense = $sale->operationalExpenses()->first();
             $hasNewExpenseData = $request->filled('related_expense_amount') && $request->filled('related_expense_description');
 
             if ($hasNewExpenseData) {
-                // Jika ada data baru, update atau buat baru
                 $sale->operationalExpenses()->updateOrCreate(
-                    ['sales_transaction_id' => $sale->id], // Kunci untuk mencari
-                    [ // Data untuk diupdate atau dibuat
+                    ['sales_transaction_id' => $sale->id],
+                    [
                         'business_unit_id' => $sale->business_unit_id,
                         'date' => $sale->transaction_date,
                         'description' => $request->input('related_expense_description'),
@@ -223,7 +216,6 @@ class SalesTransactionController extends Controller
                     ]
                 );
             } elseif ($relatedExpense) {
-                // Jika tidak ada data baru DAN ada biaya lama, hapus
                 $relatedExpense->delete();
             }
 
@@ -244,7 +236,6 @@ class SalesTransactionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Saat restore, stok dikurangi lagi seolah-olah terjadi penjualan baru
             $stockService->handleSaleCreation($sale->details->toArray());
 
             $sale->status = 'Completed';
@@ -331,26 +322,35 @@ class SalesTransactionController extends Controller
     {
         $this->authorize('view', $sale);
         $sale->load(['customer', 'user', 'details.product']);
-
-        // Ambil pengaturan toko
         $settings = Setting::where('business_unit_id', $sale->business_unit_id)
                            ->pluck('setting_value', 'setting_key');
 
-        // Kita akan membuat view ini di langkah berikutnya
-        return view('karung::sales.receipts.thermal_receipt', compact('sale', 'settings'));
+        // [BARU v1.27] Generate QR Code
+        $qrCode = null;
+        if ($sale->uuid) {
+            $url = route('receipt.verify', $sale->uuid);
+            $qrCode = base64_encode(QrCode::format('svg')->size(80)->generate($url));
+        }
+
+        return view('karung::sales.receipts.thermal_receipt', compact('sale', 'settings', 'qrCode'));
     }
 
     public function downloadPdf(SalesTransaction $sale)
     {
         $this->authorize('view', $sale);
         $sale->load(['customer', 'user', 'details.product']);
-        
         $settings = Setting::where('business_unit_id', $sale->business_unit_id)
                            ->pluck('setting_value', 'setting_key');
         
-        $pdf = Pdf::loadView('karung::sales.receipts.pdf_receipt', compact('sale', 'settings'));
+        // [BARU v1.27] Generate QR Code
+        $qrCode = null;
+        if ($sale->uuid) {
+            $url = route('receipt.verify', $sale->uuid);
+            $qrCode = base64_encode(QrCode::format('svg')->size(80)->generate($url));
+        }
+
+        $pdf = Pdf::loadView('karung::sales.receipts.pdf_receipt', compact('sale', 'settings', 'qrCode'));
         
-        // [MODIFIKASI] Ganti karakter '/' dengan '-' pada nama file agar valid
         $safeInvoiceNumber = str_replace('/', '-', $sale->invoice_number);
         $fileName = 'struk-' . strtolower($safeInvoiceNumber) . '.pdf';
         

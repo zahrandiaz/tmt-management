@@ -6,111 +6,86 @@ use App\Modules\Karung\Models\Product;
 use App\Modules\Karung\Models\Setting;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction;
+use App\Modules\Karung\Models\SalesReturn;
+use App\Modules\Karung\Models\PurchaseReturn;
 
 class StockManagementService
 {
     protected $isStockManagementActive;
 
-    /**
-     * Saat service diinisialisasi, langsung cek status manajemen stok dari database.
-     */
     public function __construct()
     {
-        // TODO: Nanti kita akan buat business_unit_id menjadi dinamis.
         $this->isStockManagementActive = Setting::where('business_unit_id', 1)
-                                                ->where('setting_key', 'automatic_stock_management')
-                                                ->value('setting_value') == 'true';
+            ->where('setting_key', 'automatic_stock_management')
+            ->value('setting_value') == 'true';
     }
 
-    /**
-     * Memeriksa apakah manajemen stok otomatis aktif.
-     */
     public function isStockManagementActive(): bool
     {
         return $this->isStockManagementActive;
     }
 
-    /**
-     * Menangani stok untuk pembuatan transaksi pembelian baru.
-     * Stok produk akan ditambah.
-     */
     public function handlePurchaseCreation(array $details): void
     {
-        if (!$this->isStockManagementActive()) {
-            return;
-        }
-
+        if (!$this->isStockManagementActive()) return;
         foreach ($details as $detail) {
             $product = Product::find($detail['product_id']);
-            if ($product) {
-                $product->increment('stock', $detail['quantity']);
-            }
+            if ($product) $product->increment('stock', $detail['quantity']);
         }
     }
 
-    /**
-     * Menangani stok untuk pembatalan atau penghapusan transaksi pembelian.
-     * Stok produk akan dikurangi.
-     */
     public function handlePurchaseCancellation(PurchaseTransaction $purchase): void
     {
-        if (!$this->isStockManagementActive()) {
-            return;
-        }
-
+        if (!$this->isStockManagementActive()) return;
         foreach ($purchase->details as $detail) {
             $product = Product::find($detail->product_id);
-            if ($product) {
-                $product->decrement('stock', $detail->quantity);
-            }
+            if ($product) $product->decrement('stock', $detail->quantity);
         }
     }
 
-    /**
-     * Menangani stok untuk pembaruan transaksi pembelian.
-     */
     public function handlePurchaseUpdate(PurchaseTransaction $purchase, array $newDetails): void
     {
-        if (!$this->isStockManagementActive()) {
-            return;
-        }
-        
-        // 1. Kembalikan stok lama
+        if (!$this->isStockManagementActive()) return;
         $this->handlePurchaseCancellation($purchase);
-
-        // 2. Tambahkan stok baru
         $this->handlePurchaseCreation($newDetails);
     }
     
-    /**
-     * Menangani stok untuk pembuatan transaksi penjualan baru.
-     * Stok produk akan dikurangi.
-     */
     public function handleSaleCreation(array $details): void
     {
-        if (!$this->isStockManagementActive()) {
-            return;
-        }
-
+        if (!$this->isStockManagementActive()) return;
         foreach ($details as $detail) {
             $product = Product::find($detail['product_id']);
-            if ($product) {
-                $product->decrement('stock', $detail['quantity']);
-            }
+            if ($product) $product->decrement('stock', $detail['quantity']);
         }
     }
 
-    /**
-     * Menangani stok untuk pembatalan atau penghapusan transaksi penjualan.
-     * Stok produk akan ditambah (dikembalikan).
-     */
     public function handleSaleCancellation(SalesTransaction $sale): void
+    {
+        if (!$this->isStockManagementActive()) return;
+        foreach ($sale->details as $detail) {
+            $product = Product::find($detail->product_id);
+            if ($product) $product->increment('stock', $detail->quantity);
+        }
+    }
+
+    public function handleSaleUpdate(SalesTransaction $sale, array $newDetails): void
+    {
+        if (!$this->isStockManagementActive()) return;
+        $this->handleSaleCancellation($sale);
+        $this->handleSaleCreation($newDetails);
+    }
+
+    /**
+     * [BARU v1.27] Menangani stok untuk retur penjualan.
+     * Stok produk akan ditambah (dikembalikan ke inventaris).
+     */
+    public function handleSaleReturn(SalesReturn $salesReturn): void
     {
         if (!$this->isStockManagementActive()) {
             return;
         }
 
-        foreach ($sale->details as $detail) {
+        foreach ($salesReturn->details as $detail) {
             $product = Product::find($detail->product_id);
             if ($product) {
                 $product->increment('stock', $detail->quantity);
@@ -119,18 +94,20 @@ class StockManagementService
     }
 
     /**
-     * Menangani stok untuk pembaruan transaksi penjualan.
+     * [BARU v1.27] Menangani stok untuk retur pembelian.
+     * Stok produk akan dikurangi dari inventaris.
      */
-    public function handleSaleUpdate(SalesTransaction $sale, array $newDetails): void
+    public function handlePurchaseReturn(PurchaseReturn $purchaseReturn): void
     {
         if (!$this->isStockManagementActive()) {
             return;
         }
-        
-        // 1. Kembalikan stok lama
-        $this->handleSaleCancellation($sale);
 
-        // 2. Kurangi stok baru
-        $this->handleSaleCreation($newDetails);
+        foreach ($purchaseReturn->details as $detail) {
+            $product = Product::find($detail->product_id);
+            if ($product) {
+                $product->decrement('stock', $detail->quantity);
+            }
+        }
     }
 }

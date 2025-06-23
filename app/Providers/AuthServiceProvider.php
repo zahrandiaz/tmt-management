@@ -8,12 +8,18 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 // Import Model dan Policy yang akan kita daftarkan
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Policies\PurchaseTransactionPolicy;
-use App\Modules\Karung\Models\SalesTransaction; // <-- Tambah ini
-use App\Policies\SalesTransactionPolicy;      // <-- Tambah ini
+use App\Modules\Karung\Models\SalesTransaction;
+use App\Policies\SalesTransactionPolicy;
 use App\Modules\Karung\Models\OperationalExpense;
 use App\Policies\OperationalExpensePolicy;
 use App\Modules\Karung\Models\Product;
 use App\Policies\ProductPolicy;
+
+// [BARU v1.27] Import model dan policy untuk retur
+use App\Modules\Karung\Models\SalesReturn;
+use App\Policies\SalesReturnPolicy;
+use App\Modules\Karung\Models\PurchaseReturn;
+use App\Policies\PurchaseReturnPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -28,6 +34,10 @@ class AuthServiceProvider extends ServiceProvider
         SalesTransaction::class => SalesTransactionPolicy::class,
         OperationalExpense::class => OperationalExpensePolicy::class,
         Product::class => ProductPolicy::class,
+
+        // [BARU v1.27] Daftarkan policy untuk retur
+        SalesReturn::class => SalesReturnPolicy::class,
+        PurchaseReturn::class => PurchaseReturnPolicy::class,
     ];
 
     /**

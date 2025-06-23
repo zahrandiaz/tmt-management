@@ -82,7 +82,13 @@
         </table>
         
         <div style="clear: both;"></div>
-
+        {{-- Tambahkan ini di file pdf_receipt.blade.php Anda --}}
+        @if(isset($qrCode))
+        <div style="text-align: center; margin-top: 20px;">
+            <img src="data:image/svg+xml;base64,{{ $qrCode }}" alt="QR Code Verifikasi">
+            <p style="font-size: 9pt;">Scan untuk verifikasi struk</p>
+        </div>
+        @endif
         <div class="footer" style="margin-top: 50px;">
             <p>Terima kasih telah berbelanja!</p>
         </div>

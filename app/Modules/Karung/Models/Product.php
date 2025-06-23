@@ -50,6 +50,16 @@ class Product extends Model
         return $this->hasMany(SalesTransactionDetail::class, 'product_id');
     }
 
+    public function salesReturnDetails()
+    {
+        return $this->hasMany(SalesReturnDetail::class, 'product_id');
+    }
+
+    public function purchaseReturnDetails()
+    {
+        return $this->hasMany(PurchaseReturnDetail::class, 'product_id');
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

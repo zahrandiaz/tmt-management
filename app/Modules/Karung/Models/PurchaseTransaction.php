@@ -65,4 +65,9 @@ class PurchaseTransaction extends Model
     {
         return $this->hasMany(OperationalExpense::class, 'purchase_transaction_id');
     }
+
+    public function returns()
+    {
+        return $this->hasMany(PurchaseReturn::class, 'purchase_transaction_id');
+    }
 }

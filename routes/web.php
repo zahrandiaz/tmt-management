@@ -6,10 +6,15 @@ use App\Http\Controllers\Tmt\UserController;
 use App\Http\Controllers\Tmt\RoleController; 
 use App\Http\Controllers\Tmt\SettingController;
 use App\Http\Controllers\Tmt\ActivityLogController;
+use App\Http\Controllers\ReceiptVerificationController;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// [BARU v1.27] Rute publik untuk verifikasi struk
+Route::get('/receipt/verify/{uuid}', [ReceiptVerificationController::class, 'verify'])->name('receipt.verify');
+
 
 Route::get('/dashboard', function () {
     return view('tmt_dashboard');

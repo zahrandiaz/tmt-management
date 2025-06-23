@@ -48,13 +48,14 @@
                 Dashboard Modul
             </a>
         </li>
-        @canany(['karung.view_purchases', 'karung.create_purchases', 'karung.view_sales', 'karung.create_sales'])
+        {{-- GANTI BLOK <LI> TRANSAKSI YANG LAMA DENGAN INI --}}
+        @canany(['karung.view_purchases', 'karung.create_purchases', 'karung.view_sales', 'karung.create_sales', 'karung.manage_returns'])
         <li>
-            <a href="#transaction-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->routeIs('karung.purchases.*') || request()->routeIs('karung.sales.*') ? '' : 'collapsed' }}">
+            <a href="#transaction-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*purchases*') || request()->is('*sales*') || request()->is('*returns*') ? '' : 'collapsed' }}">
                 <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#grid"/></svg>
                 Transaksi
             </a>
-            <div class="collapse {{ request()->routeIs('karung.purchases.*') || request()->routeIs('karung.sales.*') ? 'show' : '' }}" id="transaction-submenu">
+            <div class="collapse {{ request()->is('*purchases*') || request()->is('*sales*') || request()->is('*returns*') ? 'show' : '' }}" id="transaction-submenu">
                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
                     @canany(['karung.view_purchases', 'karung.create_purchases'])
                     <li><a href="{{ route('karung.purchases.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.purchases.*') ? 'active' : '' }}">Pembelian</a></li>
@@ -62,6 +63,12 @@
                     @canany(['karung.view_sales', 'karung.create_sales'])
                     <li><a href="{{ route('karung.sales.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.sales.*') ? 'active' : '' }}">Penjualan</a></li>
                     @endcanany
+                    
+                    {{-- [BARU v1.27] Menu Riwayat Retur --}}
+                    @can('karung.manage_returns')
+                    <li><hr class="dropdown-divider bg-light"></li>
+                    <li><a href="{{ route('karung.returns.sales.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.returns.sales.*') ? 'active' : '' }}">Riwayat Retur</a></li>
+                    @endcan
                 </ul>
             </div>
         </li>
@@ -84,14 +91,22 @@
             </div>
         </li>
         @endcanany
-        @canany(['karung.view_reports', 'karung.manage_expenses'])
+        @canany(['karung.view_reports', 'karung.manage_expenses', 'karung.manage_payments'])
         <li>
-            <a href="#finance-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*reports*') || request()->is('*operational-expenses*') ? '' : 'collapsed' }}">
+            <a href="#finance-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*reports*') || request()->is('*operational-expenses*') || request()->is('*financials*') ? '' : 'collapsed' }}">
                 <svg class="sidebar-icon me-2" width="16" height="16"><use xlink:href="#cash-coin"/></svg>
                 Keuangan
             </a>
-            <div class="collapse {{ request()->is('*reports*') || request()->is('*operational-expenses*') ? 'show' : '' }}" id="finance-submenu">
+            <div class="collapse {{ request()->is('*reports*') || request()->is('*operational-expenses*') || request()->is('*financials*') ? 'show' : '' }}" id="finance-submenu">
                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
+                    
+                    {{-- [BARU v1.27] Menu Manajemen Utang & Piutang --}}
+                    @can('karung.manage_payments')
+                    <li><a href="{{ route('karung.financials.receivables') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.financials.receivables') ? 'active' : '' }}">Manajemen Piutang</a></li>
+                    <li><a href="{{ route('karung.financials.payables') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.financials.payables') ? 'active' : '' }}">Manajemen Utang</a></li>
+                    <li><hr class="dropdown-divider bg-light"></li>
+                    @endcan
+
                     @can('karung.manage_expenses')
                     <li><a href="{{ route('karung.operational-expenses.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.operational-expenses.*') ? 'active' : '' }}">Biaya Operasional</a></li>
                     @endcan
