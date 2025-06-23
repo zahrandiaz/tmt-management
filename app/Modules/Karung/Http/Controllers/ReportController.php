@@ -565,23 +565,29 @@ class ReportController extends Controller
     }
 
     /**
-     * [BARU] Menghapus file laporan yang diekspor dan catatannya.
+     * [MODIFIKASI v1.26] Menghapus file laporan yang diekspor dan catatannya.
+     * Memperbaiki bug di mana file fisik tidak terhapus dari storage.
      */
     public function destroyExportedReport(ExportedReport $report)
     {
         try {
-            // Hapus file fisik dari storage terlebih dahulu
-            if (Storage::disk($report->disk)->exists($report->path)) {
-                Storage::disk($report->disk)->delete($report->path);
+            // Tentukan path file yang benar secara manual di dalam disk 'public'
+            $filePath = 'report_exports/' . $report->filename;
+
+            // Hapus file fisik dari storage jika ada
+            if (Storage::disk('public')->exists($filePath)) {
+                Storage::disk('public')->delete($filePath);
             }
 
             // Hapus catatan dari database
             $report->delete();
 
-            return redirect()->route('karung.reports.download_center')->with('success', 'File laporan berhasil dihapus.');
+            return redirect()->route('karung.reports.download_center')->with('success', 'Riwayat dan file laporan berhasil dihapus.');
 
         } catch (\Exception $e) {
-            return redirect()->route('karung.reports.download_center')->with('error', 'Gagal menghapus file laporan: ' . $e->getMessage());
+            // Beri pesan error yang lebih informatif jika terjadi kesalahan
+            report($e); // Optional: log error untuk debugging
+            return redirect()->route('karung.reports.download_center')->with('error', 'Terjadi kesalahan saat mencoba menghapus laporan.');
         }
     }
  }

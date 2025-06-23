@@ -77,6 +77,14 @@
         </main>
     </div>
     
+    <footer class="text-center pb-4">
+        <div class="text-xs text-gray-500">
+            TMT Management | Versi
+            <strong>{{ \App\Helpers\VersionHelper::get('version') ?? 'dev' }}</strong>
+            <span class="text-gray-400">({{ \App\Helpers\VersionHelper::get('commit') ?? 'N/A' }})</span>
+            &copy; {{ date('Y') }}
+        </div>
+    </footer>
     {{-- HAPUS INCLUDE NOTIFIKASI DARI SINI --}}
     
     {{-- ... semua script tidak berubah ... --}}

@@ -34,8 +34,13 @@
             </div>
         </div>
 
-        <footer class="py-3 mt-auto text-center bg-light border-top flex-shrink-0">
-            <small class="text-muted">Hak Cipta &copy; {{ date('Y') }} {{ config('app.name', 'Laravel') }}. Semua Hak Dilindungi.</small>
+        <footer class="text-center py-2 bg-gray-200 border-t border-gray-300">
+                <div class="text-xs text-gray-500">
+                    TMT Management | Versi
+                    <strong>{{ \App\Helpers\VersionHelper::get('version') ?? 'dev' }}</strong>
+                    <span class="text-gray-400">({{ \App\Helpers\VersionHelper::get('commit') ?? 'N/A' }})</span>
+                    &copy; {{ date('Y') }}
+                </div>
         </footer>
     </div>
 </div>
