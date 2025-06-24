@@ -65,12 +65,11 @@ class PurchaseTransactionController extends Controller
                 $totalAmount += $detail['quantity'] * $detail['purchase_price_at_transaction'];
             }
 
-            $amountPaid = $request->input('amount_paid', 0); // Ambil dari request
+            $amountPaid = $request->input('amount_paid', 0);
             if ($validatedData['payment_status'] === 'Lunas') {
                 $amountPaid = $totalAmount;
             }
             
-            // [PERBAIKAN] Buat objek dan set properti secara manual
             $purchase = new PurchaseTransaction();
             $purchase->business_unit_id = 1;
             $purchase->purchase_code = 'PB/'.date('Ymd').'/'.strtoupper(Str::random(6));
@@ -84,33 +83,41 @@ class PurchaseTransactionController extends Controller
             $purchase->payment_status = $validatedData['payment_status'];
             $purchase->amount_paid = $amountPaid;
 
-            // [MODIFIKASI] Handle upload lampiran dengan kompresi
             if ($request->hasFile('attachment_path')) {
                 $image = $request->file('attachment_path');
                 $imageName = 'nota-'.time().'.webp';
-
                 $img = Image::read($image->getRealPath());
-                $img->resize(1200, 1200, function ($constraint) { // Sedikit lebih besar untuk nota agar jelas
+                $img->resize(1200, 1200, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
-                })->toWebp(70); // Kualitas 70% sudah cukup untuk nota
-
+                })->toWebp(70);
                 $storagePath = storage_path('app/public/purchase_attachments/' . $imageName);
                 $img->save($storagePath);
-
                 $purchase->attachment_path = 'purchase_attachments/' . $imageName;
             }
             $purchase->save();
             
-            // [BARU] Logika untuk menyimpan biaya operasional terkait
+            // =====================================================================
+            // [PERBAIKAN BUG v1.30] BLOK KODE YANG HILANG DITAMBAHKAN DI SINI
+            // =====================================================================
+            foreach ($validatedData['details'] as $detail) {
+                $subTotal = $detail['quantity'] * $detail['purchase_price_at_transaction'];
+                $purchase->details()->create([
+                    'product_id'                    => $detail['product_id'],
+                    'quantity'                      => $detail['quantity'],
+                    'purchase_price_at_transaction' => $detail['purchase_price_at_transaction'],
+                    'sub_total'                     => $subTotal,
+                ]);
+            }
+            // =====================================================================
+
             if ($request->filled('related_expense_amount') && $request->filled('related_expense_description')) {
-                // Gunakan relasi yang sudah kita buat di Model
                 $purchase->operationalExpenses()->create([
                     'business_unit_id' => $purchase->business_unit_id,
                     'date' => $purchase->transaction_date,
                     'description' => $request->input('related_expense_description'),
                     'amount' => $request->input('related_expense_amount'),
-                    'category' => 'Biaya Transaksi Pembelian', // Kategori default
+                    'category' => 'Biaya Transaksi Pembelian',
                     'user_id' => auth()->id(),
                 ]);
             }
