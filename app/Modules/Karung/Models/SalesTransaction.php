@@ -25,6 +25,7 @@ class SalesTransaction extends Model
         'payment_status',
         'amount_paid',
         'uuid',
+        'verification_code',
     ];
 
     /**
@@ -43,8 +44,19 @@ class SalesTransaction extends Model
     {
         parent::boot();
         static::creating(function ($model) {
+            // Generate UUID if empty
             if (empty($model->uuid)) {
                 $model->uuid = Str::uuid()->toString();
+            }
+
+            // [BARU v1.28] Generate human-readable verification code if empty
+            if (empty($model->verification_code)) {
+                do {
+                    // Membuat kode acak 8 karakter, contoh: "A5B1C8D2"
+                    $code = strtoupper(Str::random(8)); 
+                } while (static::where('verification_code', $code)->exists()); // Pastikan kode unik
+
+                $model->verification_code = $code;
             }
         });
     }

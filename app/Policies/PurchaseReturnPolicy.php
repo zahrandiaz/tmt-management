@@ -18,7 +18,8 @@ class PurchaseReturnPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, SalesReturn $salesReturn): bool
+    // [MODIFIKASI] Ganti tipe dari SalesReturn ke PurchaseReturn
+    public function view(User $user, PurchaseReturn $purchaseReturn): bool
     {
         return $user->can('karung.manage_returns');
     }
@@ -34,15 +35,18 @@ class PurchaseReturnPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, SalesReturn $salesReturn): bool
+    // [MODIFIKASI] Ganti tipe dari SalesReturn ke PurchaseReturn
+    public function update(User $user, PurchaseReturn $purchaseReturn): bool
     {
+        // Untuk saat ini kita belum implementasi update, tapi kita perbaiki untuk masa depan
         return $user->can('karung.manage_returns');
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, SalesReturn $salesReturn): bool
+    // [MODIFIKASI] Ganti tipe dari SalesReturn ke PurchaseReturn
+    public function delete(User $user, PurchaseReturn $purchaseReturn): bool
     {
         return $user->can('karung.manage_returns');
     }
@@ -50,7 +54,8 @@ class PurchaseReturnPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, SalesReturn $salesReturn): bool
+    // [MODIFIKASI] Ganti tipe dari SalesReturn ke PurchaseReturn
+    public function restore(User $user, PurchaseReturn $purchaseReturn): bool
     {
         return $user->can('karung.manage_returns');
     }
@@ -58,7 +63,8 @@ class PurchaseReturnPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, SalesReturn $salesReturn): bool
+    // [MODIFIKASI] Ganti tipe dari SalesReturn ke PurchaseReturn
+    public function forceDelete(User $user, PurchaseReturn $purchaseReturn): bool
     {
         return $user->can('karung.manage_returns');
     }

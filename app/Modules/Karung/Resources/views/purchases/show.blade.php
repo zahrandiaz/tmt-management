@@ -10,6 +10,16 @@
                 <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Detail Transaksi Pembelian</h5>
                     <div class="no-print">
+                        {{-- [BARU v1.28] Tombol Buat Retur Pembelian --}}
+                        @can('karung.manage_returns')
+                            @if($purchase->status == 'Completed')
+                                <a href="{{ route('karung.purchases.returns.create', $purchase->id) }}" class="btn btn-warning btn-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0z"/><path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708z"/></svg>
+                                    Buat Retur
+                                </a>
+                            @endif
+                        @endcan
+
                         @if($purchase->status == 'Completed')
                             @can('karung.edit_purchases')
                                 <a href="{{ route('karung.purchases.edit', $purchase->id) }}" class="btn btn-warning btn-sm" title="Edit Transaksi">
@@ -22,7 +32,7 @@
                                     <button type="submit" class="btn btn-danger btn-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.647a.5.5 0 0 0-.708-.708L8 7.293z"/></svg> Batalkan</button>
                                 </form>
                             @endcan
-                             @can('karung.delete_purchases')
+                            @can('karung.delete_purchases')
                                 <form action="{{ route('karung.purchases.destroy', $purchase->id) }}" method="POST" class="d-inline delete-form">
                                     @csrf
                                     @method('DELETE')
@@ -36,6 +46,7 @@
                             &larr; Kembali ke Daftar Pembelian
                         </a>
                     </div>
+                    
                 </div>
                 <div class="card-body">
                     @if($purchase->status == 'Cancelled' || $purchase->status == 'Deleted')

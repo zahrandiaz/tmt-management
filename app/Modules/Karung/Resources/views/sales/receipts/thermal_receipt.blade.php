@@ -121,15 +121,24 @@
     </div>
 
     <div class="footer">
-        {{-- [BARU v1.27] Tampilkan QR Code --}}
-        @if(isset($qrCode))
-        <div class="text-center" style="margin-top: 10px;">
-            <img src="data:image/svg+xml;base64,{{ $qrCode }}" alt="QR Code Verifikasi">
-            <p style="font-size: 8pt; margin: 5px 0 0 0;">Scan untuk verifikasi</p>
-        </div>
-        @endif
+    @if(isset($qrCode))
+    <div class="text-center" style="margin-top: 10px;">
+        <img src="data:image/svg+xml;base64,{{ $qrCode }}" alt="QR Code Verifikasi">
+        <p style="font-size: 8pt; margin: 5px 0 0 0;">Scan untuk verifikasi</p>
+    </div>
+    @endif
 
-        <p>Terima kasih telah berbelanja!</p>
+    {{-- [BARU v1.28] Tampilkan kode verifikasi manual --}}
+    @if($sale->verification_code)
+        <div class="text-center" style="margin-top: 5px;">
+            <p style="font-size: 8pt; margin: 0;">atau cek manual di web kami</p>
+            <p style="font-size: 10pt; font-weight: bold; margin: 0; letter-spacing: 1px;">
+                Kode: {{ $sale->verification_code }}
+            </p>
+        </div>
+    @endif
+
+    <p style="margin-top: 10px;">Terima kasih telah berbelanja!</p>
     </div>
 
     <script>

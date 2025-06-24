@@ -7,6 +7,9 @@ use App\Modules\Karung\Models\SalesTransaction;
 use App\Modules\Karung\Models\SalesReturn;
 use App\Modules\Karung\Models\SalesReturnDetail;
 use App\Modules\Karung\Http\Requests\StoreSalesReturnRequest;
+use App\Modules\Karung\Models\PurchaseTransaction;
+use App\Modules\Karung\Models\PurchaseReturn;
+use App\Modules\Karung\Http\Requests\StorePurchaseReturnRequest;
 use App\Modules\Karung\Services\StockManagementService;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -113,5 +116,105 @@ class ReturnController extends Controller
 
         $salesReturn->load('details.product', 'customer', 'user', 'originalTransaction');
         return view('karung::returns.sales.show', compact('salesReturn'));
+    }
+
+    // --- [BARU v1.28] PURCHASE RETURN METHODS ---
+
+    /**
+     * Menampilkan daftar retur pembelian.
+     */
+    public function purchaseReturnIndex()
+    {
+        $this->authorize('viewAny', PurchaseReturn::class);
+
+        $returns = PurchaseReturn::with('supplier', 'originalTransaction')->latest()->paginate(15);
+        return view('karung::returns.purchases.index', compact('returns'));
+    }
+
+    /**
+     * Menampilkan form untuk membuat retur dari transaksi pembelian.
+     */
+    public function createPurchaseReturn(PurchaseTransaction $purchaseTransaction)
+    {
+        $this->authorize('create', PurchaseReturn::class);
+
+        // Gunakan kode ini yang sudah terbukti bisa memuat relasi
+        $loadedTransaction = PurchaseTransaction::with('details.product')
+            ->findOrFail($purchaseTransaction->id);
+
+        return view('karung::returns.purchases.create', ['purchaseTransaction' => $loadedTransaction]);
+    }
+
+    /**
+     * Menyimpan data retur pembelian baru.
+     */
+    public function storePurchaseReturn(StorePurchaseReturnRequest $request, PurchaseTransaction $purchaseTransaction)
+    {
+        try {
+            $validated = $request->validated();
+            $totalReturnAmount = 0;
+
+            $return = DB::transaction(function () use ($validated, $purchaseTransaction, &$totalReturnAmount) {
+                $purchaseReturn = PurchaseReturn::create([
+                    'return_code' => 'RTP-' . Carbon::now()->format('YmdHis'),
+                    'purchase_transaction_id' => $purchaseTransaction->id,
+                    'supplier_id' => $purchaseTransaction->supplier_id,
+                    'user_id' => auth()->id(),
+                    'return_date' => $validated['return_date'],
+                    'reason' => $validated['reason'],
+                    'total_amount' => 0, // Placeholder
+                ]);
+
+                foreach ($validated['items'] as $item) {
+                    // [MODIFIKASI] Cari detail langsung dari model, bukan dari relasi.
+                    $originalDetail = \App\Modules\Karung\Models\PurchaseTransactionDetail::find($item['purchase_transaction_detail_id']);
+
+                    // Cek ulang untuk keamanan, meskipun sudah divalidasi di FormRequest
+                    if (!$originalDetail || $originalDetail->purchase_transaction_id !== $purchaseTransaction->id) {
+                        throw new \Exception("Terjadi inkonsistensi data item retur.");
+                    }
+                    if ($item['return_quantity'] > $originalDetail->quantity) {
+                        throw new \Exception("Jumlah retur melebihi jumlah pembelian.");
+                    }
+
+                    // [MODIFIKASI] Gunakan purchase_price_at_transaction dari detail asli
+                    $subtotal = $originalDetail->purchase_price_at_transaction * $item['return_quantity'];
+                    $totalReturnAmount += $subtotal;
+
+                    $purchaseReturn->details()->create([
+                        'product_id' => $item['product_id'],
+                        'quantity' => $item['return_quantity'],
+                        // [MODIFIKASI] Gunakan purchase_price_at_transaction dari detail asli
+                        'price' => $originalDetail->purchase_price_at_transaction,
+                        'subtotal' => $subtotal,
+                    ]);
+                }
+
+                $purchaseReturn->total_amount = $totalReturnAmount;
+                $purchaseReturn->save();
+
+                $this->stockManagementService->handlePurchaseReturn($purchaseReturn);
+                
+                // TODO: Logika penyesuaian pembayaran pada tagihan asli ke supplier.
+
+                return $purchaseReturn;
+            });
+
+            return redirect()->route('karung.returns.purchases.show', $return->id)
+                ->with('success', 'Retur pembelian berhasil dibuat dengan kode: ' . $return->return_code);
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal membuat retur: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Menampilkan detail satu retur pembelian.
+     */
+    public function showPurchaseReturn(PurchaseReturn $purchaseReturn)
+    {
+        $this->authorize('view', $purchaseReturn);
+        $purchaseReturn->load('details.product', 'supplier', 'user', 'originalTransaction');
+        return view('karung::returns.purchases.show', compact('purchaseReturn'));
     }
 }

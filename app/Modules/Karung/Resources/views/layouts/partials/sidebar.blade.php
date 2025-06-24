@@ -64,10 +64,17 @@
                     <li><a href="{{ route('karung.sales.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.sales.*') ? 'active' : '' }}">Penjualan</a></li>
                     @endcanany
                     
-                    {{-- [BARU v1.27] Menu Riwayat Retur --}}
                     @can('karung.manage_returns')
                     <li><hr class="dropdown-divider bg-light"></li>
-                    <li><a href="{{ route('karung.returns.sales.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.returns.sales.*') ? 'active' : '' }}">Riwayat Retur</a></li>
+                    <li>
+                        <a href="#return-submenu" data-bs-toggle="collapse" class="nav-link text-white {{ request()->is('*returns*') ? '' : 'collapsed' }}">Riwayat Retur</a>
+                        <div class="collapse {{ request()->is('*returns*') ? 'show' : '' }}" id="return-submenu">
+                            <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small ms-4">
+                                <li><a href="{{ route('karung.returns.sales.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.returns.sales.*') ? 'active' : '' }}">- Retur Penjualan</a></li>
+                                <li><a href="{{ route('karung.returns.purchases.index') }}" class="nav-link text-white rounded {{ request()->routeIs('karung.returns.purchases.*') ? 'active' : '' }}">- Retur Pembelian</a></li>
+                            </ul>
+                        </div>
+                    </li>
                     @endcan
                 </ul>
             </div>

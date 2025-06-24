@@ -89,6 +89,16 @@
             <p style="font-size: 9pt;">Scan untuk verifikasi struk</p>
         </div>
         @endif
+
+        {{-- [BARU v1.28] Tampilkan kode verifikasi manual --}}
+        @if($sale->verification_code)
+            <div class="text-center" style="margin-top: 5px;">
+                <p style="font-size: 8pt; margin: 0;">atau cek manual di web kami</p>
+                <p style="font-size: 10pt; font-weight: bold; margin: 0; letter-spacing: 1px;">
+                    Kode: {{ $sale->verification_code }}
+                </p>
+            </div>
+        @endif
         <div class="footer" style="margin-top: 50px;">
             <p>Terima kasih telah berbelanja!</p>
         </div>

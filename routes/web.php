@@ -12,7 +12,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// [BARU v1.27] Rute publik untuk verifikasi struk
+// [MODIFIKASI v1.28] Rute publik untuk verifikasi struk
+Route::get('/verify', [ReceiptVerificationController::class, 'showVerificationForm'])->name('receipt.form');
+Route::post('/verify', [ReceiptVerificationController::class, 'verifyByCode'])->name('receipt.verify.by_code');
 Route::get('/receipt/verify/{uuid}', [ReceiptVerificationController::class, 'verify'])->name('receipt.verify');
 
 

@@ -89,15 +89,24 @@ Route::middleware(['permission:karung.manage_payments'])->prefix('financials')->
     Route::get('/history/{type}/{id}', [\App\Modules\Karung\Http\Controllers\FinancialManagementController::class, 'paymentHistory'])->name('payments.history');
 });
 
-// [BARU v1.27] Rute Manajemen Retur
+// [MODIFIKASI v1.28] Rute Manajemen Retur (Penjualan & Pembelian)
 Route::middleware(['permission:karung.manage_returns'])->prefix('returns')->name('returns.')->group(function() {
     // Rute untuk Retur Penjualan
     Route::get('/sales', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'salesReturnIndex'])->name('sales.index');
     Route::get('/sales/{salesReturn}', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'showSalesReturn'])->name('sales.show');
+    
+    // [BARU] Rute untuk Retur Pembelian
+    Route::get('/purchases', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'purchaseReturnIndex'])->name('purchases.index');
+    Route::get('/purchases/{purchaseReturn}', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'showPurchaseReturn'])->name('purchases.show');
 });
-// Rute untuk membuat retur butuh diletakkan di luar grup karena parameternya berbeda
+
+// Rute untuk membuat retur
 Route::get('/sales/{salesTransaction}/returns/create', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'createSalesReturn'])->name('sales.returns.create')->middleware('permission:karung.manage_returns');
 Route::post('/sales/{salesTransaction}/returns', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'storeSalesReturn'])->name('sales.returns.store')->middleware('permission:karung.manage_returns');
+
+// [BARU] Rute untuk membuat retur pembelian
+Route::get('/purchases/{purchaseTransaction}/returns/create', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'createPurchaseReturn'])->name('purchases.returns.create')->middleware('permission:karung.manage_returns');
+Route::post('/purchases/{purchaseTransaction}/returns', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'storePurchaseReturn'])->name('purchases.returns.store')->middleware('permission:karung.manage_returns');
 
 // [MODIFIKASI] Tambahkan rute ini untuk aksi hapus
 Route::delete('/reports/download-center/{report}', [ReportController::class, 'destroyExportedReport'])
