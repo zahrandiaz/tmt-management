@@ -12,6 +12,7 @@
                     <a href="{{ route('karung.dashboard') }}" class="btn btn-light btn-sm">Kembali ke Dashboard</a>
                 </div>
                 <div class="card-body">
+                    {{-- Bagian Filter Tanggal (Tidak Berubah) --}}
                     <div class="mb-3">
                         <a href="{{ route('karung.reports.profit_and_loss', ['preset' => 'today']) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'today' ? 'active' : '' }}">Hari Ini</a>
                         <a href="{{ route('karung.reports.profit_and_loss', ['preset' => 'this_week']) }}" class="btn btn-outline-primary btn-sm {{ $activePreset == 'this_week' ? 'active' : '' }}">Minggu Ini</a>
@@ -35,36 +36,42 @@
                         </div>
                     </form>
 
+                    {{-- Tombol Export (Tidak Berubah) --}}
                     <div class="mb-4">
                         <strong>Export Laporan:</strong>
-                        {{-- [MODIFIKASI] Menambahkan parameter tanggal ke route export --}}
                         @php
                             $exportParams = array_merge(request()->query(), ['start_date' => $startDate, 'end_date' => $endDate]);
                         @endphp
-                        <a href="{{ route('karung.reports.profit_loss.export', $exportParams) }}" class="btn btn-success btn-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel-fill" viewBox="0 0 16 16"><path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M5.884 6.68 8 9.219l2.116-2.54a.5.5 0 1 1 .768.641L8.651 10l2.233 2.68a.5.5 0 0 1-.768.64L8 10.781l-2.116 2.54a.5.5 0 0 1-.768-.641L7.349 10 5.116 7.32a.5.5 0 1 1 .768-.64"/></svg> Excel</a>
-                        <a href="{{ route('karung.reports.profit_loss.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill" viewBox="0 0 16 16"><path d="M5.523 12.424q.21-.124.459-.238a8 8 0 0 1-.45.606c-.28.337-.498.516-.635.572a.27.27 0 0 1-.035.012.28.28 0 0 1-.031-.023c-.075-.041-.158-.1-.218-.17a.85.85 0 0 1-.135-.37c-.014-.042-.027-.102-.038-.172a.21.21 0 0 1 .035-.145c.022-.02.05-.038.083-.051a.2.2 0 0 1 .051-.028.2.2 0 0 1 .068.004q.032.007.07.02z"/><path fill-rule="evenodd" d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2m5.5 1.5v2a1 1 0 0 0 1 1h2zM.5 11.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/></svg> PDF</a>
+                        <a href="{{ route('karung.reports.profit_loss.export', $exportParams) }}" class="btn btn-success btn-sm"><svg...></svg> Excel</a>
+                        <a href="{{ route('karung.reports.profit_loss.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm"><svg...></svg> PDF</a>
                     </div>
                     <hr>
 
+                    {{-- [MODIFIKASI v1.30] Bagian Ringkasan Laporan dengan Data Retur --}}
                     <h5 class="mb-3">Ringkasan Laporan untuk Periode {{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d F Y') : 'Awal' }} s/d {{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d F Y') : 'Akhir' }}</h5>
                     
                     <div class="row align-items-center mb-4">
                         <div class="col-md-4">
                             <div style="height: 250px;"><canvas id="profitChart"></canvas></div>
                         </div>
-                        {{-- [MODIFIKASI] Menambahkan Biaya Operasional dan Laba Bersih --}}
                         <div class="col-md-8">
                             <div class="card border-success border-2 mb-2"><div class="card-body p-2">
-                                <div class="d-flex justify-content-between align-items-center"><span>(+) Total Pendapatan (Omzet)</span> <span class="fw-bold fs-5">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span></div>
+                                <div class="d-flex justify-content-between align-items-center"><span>Pendapatan Kotor (Omzet)</span> <span class="fw-bold">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span></div>
                             </div></div>
-                            <div class="card border-secondary border-2 mb-2"><div class="card-body p-2">
-                                <div class="d-flex justify-content-between align-items-center"><span>(-) Total Modal Terjual (HPP)</span> <span class="fw-bold fs-5">Rp {{ number_format($totalCost, 0, ',', '.') }}</span></div>
+                            <div class="card border-warning border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(-) Total Retur Penjualan</span> <span class="fw-bold">Rp {{ number_format($totalReturns, 0, ',', '.') }}</span></div>
                             </div></div>
-                            <div class="card bg-light border-secondary border-2 mb-2"><div class="card-body p-2">
-                                <div class="d-flex justify-content-between align-items-center"><span>(=) Laba Kotor</span> <span class="fw-bold fs-5">Rp {{ number_format($grossProfit, 0, ',', '.') }}</span></div>
+                            <div class="card bg-light border-dark border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(=) Pendapatan Bersih</span> <span class="fw-bold fs-5">Rp {{ number_format($netRevenue, 0, ',', '.') }}</span></div>
+                            </div></div>
+                             <div class="card border-secondary border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(-) HPP Bersih</span> <span class="fw-bold">Rp {{ number_format($netCostOfGoodsSold, 0, ',', '.') }}</span></div>
+                            </div></div>
+                            <div class="card bg-light border-info border-2 mb-2"><div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center"><span>(=) Laba Kotor</span> <span class="fw-bold fs-5 text-info">Rp {{ number_format($grossProfit, 0, ',', '.') }}</span></div>
                             </div></div>
                              <div class="card border-danger border-2 mb-2"><div class="card-body p-2">
-                                <div class="d-flex justify-content-between align-items-center"><span>(-) Total Biaya Operasional</span> <span class="fw-bold fs-5">Rp {{ number_format($totalExpenses, 0, ',', '.') }}</span></div>
+                                <div class="d-flex justify-content-between align-items-center"><span>(-) Biaya Operasional</span> <span class="fw-bold">Rp {{ number_format($totalExpenses, 0, ',', '.') }}</span></div>
                             </div></div>
                             <div class="card text-white {{ $netProfit >= 0 ? 'bg-primary' : 'bg-danger' }}"><div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center"><h6 class="card-title mb-0">(=) LABA BERSIH</h6><p class="card-text fs-4 fw-bold mb-0">Rp {{ number_format($netProfit, 0, ',', '.') }}</p></div>
@@ -72,7 +79,7 @@
                         </div>
                     </div>
                     <hr>
-
+                    
                     <h5 class="mb-3">Ringkasan Laba per Kategori Produk</h5>
                     <div class="table-responsive mb-5">
                         <table class="table table-sm table-bordered">
@@ -149,19 +156,21 @@
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Total Laba Kotor', 'Total Modal (HPP)'],
+                    // [MODIFIKASI v1.30] Update data chart agar lebih relevan
+                    labels: ['Laba Kotor', 'HPP Bersih', 'Biaya Operasional'],
                     datasets: [{
-                        data: [{{ $grossProfit > 0 ? $grossProfit : 0 }}, {{ $totalCost > 0 ? $totalCost : 0 }}],
-                        // [PERBAIKAN] Mengubah warna agar sesuai kartu: Laba (Biru), Modal (Merah)
+                        data: [
+                            {{ $grossProfit > 0 ? $grossProfit : 0 }}, 
+                            {{ $netCostOfGoodsSold > 0 ? $netCostOfGoodsSold : 0 }},
+                            {{ $totalExpenses > 0 ? $totalExpenses : 0 }}
+                        ],
                         backgroundColor: [
-                            'rgba(13, 110, 253, 0.8)', // Primary color for profit
-                            'rgba(220, 53, 69, 0.8)',  // Danger color for cost
+                            'rgba(13, 110, 253, 0.8)', // Biru untuk Laba
+                            'rgba(220, 53, 69, 0.8)',   // Merah untuk HPP
+                            'rgba(255, 193, 7, 0.8)',   // Kuning untuk Biaya
                         ],
-                        borderColor: [
-                            'rgba(13, 110, 253, 1)',
-                            'rgba(220, 53, 69, 1)',
-                        ],
-                        borderWidth: 1
+                        borderColor: ['#FFFFFF'],
+                        borderWidth: 2
                     }]
                 },
                 options: {

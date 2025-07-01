@@ -94,7 +94,9 @@ Route::middleware(['permission:karung.manage_returns'])->prefix('returns')->name
     // Rute untuk Retur Penjualan
     Route::get('/sales', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'salesReturnIndex'])->name('sales.index');
     Route::get('/sales/{salesReturn}', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'showSalesReturn'])->name('sales.show');
-    
+    // [BARU v1.30] Rute untuk download Nota Kredit
+    Route::get('/sales/{salesReturn}/credit-note', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'downloadCreditNotePdf'])->name('sales.credit_note.pdf');
+
     // [BARU] Rute untuk Retur Pembelian
     Route::get('/purchases', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'purchaseReturnIndex'])->name('purchases.index');
     Route::get('/purchases/{purchaseReturn}', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'showPurchaseReturn'])->name('purchases.show');
