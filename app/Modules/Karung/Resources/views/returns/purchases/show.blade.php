@@ -18,7 +18,12 @@
                     <div class="card">
                         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Detail Retur: #{{ $purchaseReturn->return_code }}</h5>
-                            <a href="{{ route('karung.returns.purchases.index') }}" class="btn btn-light btn-sm"><i class="bi bi-arrow-left-circle"></i> Kembali ke Riwayat Retur</a>
+                            <div>
+                                <a href="{{ route('karung.returns.purchases.debit_note.pdf', $purchaseReturn) }}" class="btn btn-danger btn-sm" target="_blank">
+                                    <i class="bi bi-file-earmark-pdf-fill"></i> Download Nota Debit
+                                </a>
+                                <a href="{{ route('karung.returns.purchases.index') }}" class="btn btn-light btn-sm"><i class="bi bi-arrow-left-circle"></i> Kembali ke Riwayat Retur</a>
+                            </div>
                         </div>
                         <div class="card-body">
                             {{-- Informasi Utama --}}

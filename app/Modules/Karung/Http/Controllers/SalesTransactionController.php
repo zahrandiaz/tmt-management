@@ -139,7 +139,8 @@ class SalesTransactionController extends Controller
     public function show(SalesTransaction $sale)
     {
         $this->authorize('view', $sale);
-        $sale->load(['customer', 'user', 'details.product']);
+        // [MODIFIKASI v1.32.0] Eager load relasi 'returns' untuk ditampilkan di view
+        $sale->load(['customer', 'user', 'details.product', 'returns']);
         return view('karung::sales.show', compact('sale'));
     }
 

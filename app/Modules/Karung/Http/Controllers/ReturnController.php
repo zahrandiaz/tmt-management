@@ -175,10 +175,8 @@ class ReturnController extends Controller
                 ]);
 
                 foreach ($validated['items'] as $item) {
-                    // [MODIFIKASI] Cari detail langsung dari model, bukan dari relasi.
                     $originalDetail = \App\Modules\Karung\Models\PurchaseTransactionDetail::find($item['purchase_transaction_detail_id']);
 
-                    // Cek ulang untuk keamanan, meskipun sudah divalidasi di FormRequest
                     if (!$originalDetail || $originalDetail->purchase_transaction_id !== $purchaseTransaction->id) {
                         throw new \Exception("Terjadi inkonsistensi data item retur.");
                     }
@@ -186,14 +184,12 @@ class ReturnController extends Controller
                         throw new \Exception("Jumlah retur melebihi jumlah pembelian.");
                     }
 
-                    // [MODIFIKASI] Gunakan purchase_price_at_transaction dari detail asli
                     $subtotal = $originalDetail->purchase_price_at_transaction * $item['return_quantity'];
                     $totalReturnAmount += $subtotal;
 
                     $purchaseReturn->details()->create([
                         'product_id' => $item['product_id'],
                         'quantity' => $item['return_quantity'],
-                        // [MODIFIKASI] Gunakan purchase_price_at_transaction dari detail asli
                         'price' => $originalDetail->purchase_price_at_transaction,
                         'subtotal' => $subtotal,
                     ]);
@@ -204,13 +200,27 @@ class ReturnController extends Controller
 
                 $this->stockManagementService->handlePurchaseReturn($purchaseReturn);
                 
-                // TODO: Logika penyesuaian pembayaran pada tagihan asli ke supplier.
+                // =====================================================================
+                // [BARU v1.32.0] Penyesuaian utang dengan mengurangi total tagihan
+                // =====================================================================
+                // 1. Kurangi total nilai transaksi pembelian dengan nilai retur.
+                $purchaseTransaction->total_amount -= $totalReturnAmount;
+                
+                // 2. Cek kembali apakah transaksi sekarang menjadi lunas.
+                //    Kolom 'amount_paid' tidak diubah.
+                if ($purchaseTransaction->amount_paid >= $purchaseTransaction->total_amount) {
+                    $purchaseTransaction->payment_status = 'Lunas';
+                }
+                
+                $purchaseTransaction->save();
+                // =====================================================================
 
                 return $purchaseReturn;
             });
 
+            // [MODIFIKASI v1.32.0] Pesan sukses diperbarui
             return redirect()->route('karung.returns.purchases.show', $return->id)
-                ->with('success', 'Retur pembelian berhasil dibuat dengan kode: ' . $return->return_code);
+                ->with('success', 'Retur pembelian berhasil dibuat dan utang telah disesuaikan. Kode: ' . $return->return_code);
 
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal membuat retur: ' . $e->getMessage())->withInput();
@@ -241,6 +251,24 @@ class ReturnController extends Controller
         $pdf = Pdf::loadView('karung::returns.sales.credit_note_pdf', compact('salesReturn', 'settings'));
         
         $fileName = 'nota-kredit-' . strtolower($salesReturn->return_code) . '.pdf';
+        
+        return $pdf->stream($fileName);
+    }
+
+    /**
+     * [BARU v1.32.0] Generate dan download Nota Debit dalam format PDF.
+     */
+    public function downloadDebitNotePdf(PurchaseReturn $purchaseReturn)
+    {
+        $this->authorize('view', $purchaseReturn);
+        $purchaseReturn->load('details.product', 'supplier', 'originalTransaction');
+        
+        // Ambil pengaturan toko untuk header
+        $settings = Setting::pluck('setting_value', 'setting_key');
+
+        $pdf = Pdf::loadView('karung::returns.purchases.debit_note_pdf', compact('purchaseReturn', 'settings'));
+        
+        $fileName = 'nota-debit-' . strtolower($purchaseReturn->return_code) . '.pdf';
         
         return $pdf->stream($fileName);
     }
