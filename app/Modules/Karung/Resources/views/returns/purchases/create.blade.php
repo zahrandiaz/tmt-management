@@ -1,18 +1,25 @@
-@extends('karung::layouts.karung_app')
-@section('title', 'Buat Retur Pembelian - Modul Toko Karung')
-@section('module-content')
-<div class="container-fluid" x-data="returnFormHandler()">
-    <form action="{{ route('karung.purchases.returns.store', $purchaseTransaction->id) }}" method="POST">
-        @csrf
-        <div class="row">
-            <div class="col-12">
+{{-- Menggunakan layout utama aplikasi --}}
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="h4 fw-bold mb-0">
+            Buat Retur Pembelian
+        </h2>
+    </x-slot>
+
+    <x-module-layout>
+        <x-slot name="sidebar">
+            @include('karung::layouts.partials.sidebar')
+        </x-slot>
+
+        <div class="container-fluid" x-data="returnFormHandler()">
+            <form action="{{ route('karung.purchases.returns.store', $purchaseTransaction->id) }}" method="POST">
+                @csrf
                 <div class="card">
                     <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Buat Retur untuk Pembelian #{{ $purchaseTransaction->purchase_code }}</h5>
-                        <a href="{{ route('karung.purchases.show', $purchaseTransaction->id) }}" class="btn btn-secondary btn-sm">&larr; Batal</a>
+                        <a href="{{ route('karung.purchases.show', $purchaseTransaction->id) }}" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Batal</a>
                     </div>
                     <div class="card-body">
-                        {{-- [MODIFIKASI] Pastikan blok error ini lengkap --}}
                         @if ($errors->any())
                             <div class="alert alert-danger mb-4">
                                 <strong>Whoops! Ada beberapa masalah dengan input Anda.</strong>
@@ -23,7 +30,6 @@
                                 </ul>
                             </div>
                         @endif
-                        
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="return_date" class="form-label">Tanggal Retur</label>
@@ -31,9 +37,10 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="reason" class="form-label">Alasan Retur (Opsional)</label>
-                                <input type="text" class="form-control" id="reason" name="reason" value="{{ old('reason') }}" placeholder="Contoh: Barang rusak, salah kirim">
+                                <input type="text" class="form-control" id="reason" name="reason" value="{{ old('reason') }}" placeholder="Contoh: Barang tidak sesuai, cacat">
                             </div>
                         </div>
+
                         <h6 class="mt-4">Pilih Produk yang Akan Diretur</h6>
                         <div class="table-responsive">
                             <table class="table table-bordered">
@@ -50,6 +57,7 @@
                                     <tr>
                                         <td>
                                             <input class="form-check-input" type="checkbox" value="{{ $detail->id }}" x-model="checkedItems">
+                                            {{-- Input hidden ini akan diaktifkan/dinonaktifkan berdasarkan checkbox --}}
                                             <input type="hidden" name="items[{{ $detail->id }}][purchase_transaction_detail_id]" value="{{ $detail->id }}" :disabled="!isChecked({{ $detail->id }})">
                                             <input type="hidden" name="items[{{ $detail->id }}][product_id]" value="{{ $detail->product_id }}" :disabled="!isChecked({{ $detail->id }})">
                                         </td>
@@ -65,21 +73,25 @@
                         </div>
                     </div>
                     <div class="card-footer text-end">
-                        <button type="submit" class="btn btn-primary" :disabled="checkedItems.length === 0">Proses Retur</button>
+                        <button type="submit" class="btn btn-primary" :disabled="checkedItems.length === 0">
+                            <i class="bi bi-save-fill me-1"></i> Proses Retur
+                        </button>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
-    </form>
-</div>
-<script>
-    function returnFormHandler() {
-        return {
-            checkedItems: [],
-            isChecked(id) {
-                return this.checkedItems.includes(id.toString());
+    </x-module-layout>
+
+    <x-slot name="scripts">
+        <script>
+            function returnFormHandler() {
+                return {
+                    checkedItems: [],
+                    isChecked(id) {
+                        return this.checkedItems.includes(id.toString());
+                    }
+                }
             }
-        }
-    }
-</script>
-@endsection
+        </script>
+    </x-slot>
+</x-app-layout>

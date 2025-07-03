@@ -20,6 +20,8 @@ use App\Modules\Karung\Models\ProductCategory;
 use App\Modules\Karung\Models\Supplier;
 use App\Modules\Karung\Models\SalesTransactionDetail;
 use App\Modules\Karung\Models\PurchaseTransactionDetail;
+use App\Modules\Karung\Models\SalesReturn; // <-- [BARU]
+use App\Modules\Karung\Models\SalesReturnDetail; // <-- [BARU]
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Karung\Models\OperationalExpense;
@@ -264,35 +266,63 @@ class ReportController extends Controller
 
     public function profitAndLoss(Request $request)
     {
+        // --- PERSIAPAN ---
         $dateRange = $this->getDateRange($request);
         $startDate = $dateRange['startDate'];
         $endDate = $dateRange['endDate'];
         $activePreset = $dateRange['activePreset'];
         
-        $salesQuery = SalesTransaction::where('status', 'Completed');
-        if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        // --- PENDAPATAN ---
+        // 1. Dapatkan Total Pendapatan Kotor (Gross Revenue) dari transaksi yang selesai
+        $totalRevenue = SalesTransaction::where('status', 'Completed')
+            ->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->sum('total_amount');
 
-        // [MODIFIKASI] Kita tidak perlu lagi ->with('product.category') di sini karena HPP sudah ada
-        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn ($q) => $q->whereIn('id', $salesQuery->pluck('id')))->get();
+        // 2. Dapatkan Total Nilai Retur Penjualan pada periode yang sama
+        $totalReturns = SalesReturn::whereBetween('return_date', [$startDate, $endDate])
+            ->sum('total_amount');
+
+        // 3. Hitung Pendapatan Bersih (Net Revenue)
+        $netRevenue = $totalRevenue - $totalReturns;
         
-        $totalRevenue = $salesDetails->sum('sub_total');
+        // --- BIAYA BARANG TERJUAL (COGS) ---
+        // 4. Dapatkan Total HPP dari semua penjualan yang terjadi
+        $totalCostOfGoodsSold = SalesTransactionDetail::whereHas('transaction', function($q) use ($startDate, $endDate) {
+            $q->where('status', 'Completed')
+              ->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        })->sum(DB::raw('quantity * purchase_price_at_sale'));
 
-        // [MODIFIKASI] Kalkulasi Total HPP sekarang menggunakan data historis yang akurat
-        $totalCost = $salesDetails->sum(function ($detail) {
-            return $detail->quantity * $detail->purchase_price_at_sale;
-        });
+        // 5. Hitung nilai HPP dari barang yang diretur pada periode yang sama
+        $costOfReturnedGoods = SalesReturnDetail::query()
+            ->join('karung_sales_returns', 'karung_sales_return_details.sales_return_id', '=', 'karung_sales_returns.id')
+            ->join('karung_sales_transaction_details', function ($join) {
+                $join->on('karung_sales_returns.sales_transaction_id', '=', 'karung_sales_transaction_details.sales_transaction_id')
+                     ->on('karung_sales_return_details.product_id', '=', 'karung_sales_transaction_details.product_id');
+            })
+            ->whereBetween('karung_sales_returns.return_date', [$startDate, $endDate])
+            ->selectRaw('SUM(karung_sales_return_details.quantity * karung_sales_transaction_details.purchase_price_at_sale) as total')
+            ->value('total') ?? 0;
 
-        $grossProfit = $totalRevenue - $totalCost;
+        // 6. Hitung HPP Bersih (Net COGS)
+        $netCostOfGoodsSold = $totalCostOfGoodsSold - $costOfReturnedGoods;
 
+        // --- LABA KOTOR ---
+        // 7. Hitung Laba Kotor (Gross Profit)
+        $grossProfit = $netRevenue - $netCostOfGoodsSold;
+
+        // --- BIAYA OPERASIONAL & LABA BERSIH ---
+        // 8. Dapatkan total biaya operasional
         $expensesQuery = OperationalExpense::query();
-        if ($startDate) { $expensesQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $expensesQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
+        if ($startDate) { $expensesQuery->whereDate('date', '>=', $startDate); }
+        if ($endDate) { $expensesQuery->whereDate('date', '<=', $endDate); }
         $totalExpenses = $expensesQuery->sum('amount');
         
+        // 9. Hitung Laba Bersih (Net Profit)
         $netProfit = $grossProfit - $totalExpenses;
         
-        // [MODIFIKASI] Kalkulasi laba per kategori juga menggunakan HPP akurat
+        // NOTE: Kalkulasi laba per kategori belum disesuaikan dengan retur untuk saat ini.
+        // Kita akan fokus pada total laporan terlebih dahulu.
+        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn ($q) => $q->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']))->get();
         $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
             ->groupBy('product.category.name')
             ->map(function ($details, $categoryName) {
@@ -301,10 +331,12 @@ class ReportController extends Controller
                 return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
             })->sortByDesc('total_profit');
             
+        // Kirim semua data baru ke view
         return view('karung::reports.profit_loss_report', compact(
-            'totalRevenue', 'totalCost', 'grossProfit', 
-            'totalExpenses', 'netProfit', 'salesDetails', 
-            'profitByCategory', 'startDate', 'endDate', 'activePreset'
+            'totalRevenue', 'totalReturns', 'netRevenue', // Data Pendapatan Baru
+            'totalCostOfGoodsSold', 'costOfReturnedGoods', 'netCostOfGoodsSold', // Data HPP Baru
+            'grossProfit', 'totalExpenses', 'netProfit', // Hasil Akhir
+            'salesDetails', 'profitByCategory', 'startDate', 'endDate', 'activePreset'
         ));
     }
 

@@ -1,17 +1,23 @@
-@extends('karung::layouts.karung_app')
+{{-- Menggunakan layout utama aplikasi --}}
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="h4 fw-bold mb-0">
+            Buat Retur Penjualan
+        </h2>
+    </x-slot>
 
-@section('title', 'Buat Retur Penjualan - Modul Toko Karung')
+    <x-module-layout>
+        <x-slot name="sidebar">
+            @include('karung::layouts.partials.sidebar')
+        </x-slot>
 
-@section('module-content')
-<div class="container-fluid" x-data="returnFormHandler()">
-    <form action="{{ route('karung.sales.returns.store', $salesTransaction->id) }}" method="POST">
-        @csrf
-        <div class="row">
-            <div class="col-12">
+        <div class="container-fluid" x-data="returnFormHandler()">
+            <form action="{{ route('karung.sales.returns.store', $salesTransaction->id) }}" method="POST">
+                @csrf
                 <div class="card">
                     <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Buat Retur untuk Invoice #{{ $salesTransaction->invoice_number }}</h5>
-                        <a href="{{ route('karung.sales.show', $salesTransaction->id) }}" class="btn btn-secondary btn-sm">&larr; Batal</a>
+                        <a href="{{ route('karung.sales.show', $salesTransaction->id) }}" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Batal</a>
                     </div>
                     <div class="card-body">
                         @if ($errors->any())
@@ -50,20 +56,15 @@
                                     @foreach($salesTransaction->details as $detail)
                                     <tr>
                                         <td>
-                                            {{-- Checkbox utama tetap sama --}}
-                                            <input class="form-check-input" type="checkbox" value="{{ $detail->id }}" 
-                                                x-model="checkedItems" :id="'item-check-{{ $detail->id }}'">
-                                            
-                                            {{-- [MODIFIKASI] Tambahkan :disabled pada input-input hidden --}}
+                                            <input class="form-check-input" type="checkbox" value="{{ $detail->id }}" x-model="checkedItems">
+                                            {{-- Input hidden ini akan diaktifkan/dinonaktifkan berdasarkan checkbox --}}
                                             <input type="hidden" name="items[{{ $detail->id }}][sales_transaction_detail_id]" value="{{ $detail->id }}" :disabled="!isChecked({{ $detail->id }})">
                                             <input type="hidden" name="items[{{ $detail->id }}][product_id]" value="{{ $detail->product_id }}" :disabled="!isChecked({{ $detail->id }})">
                                         </td>
                                         <td>{{ $detail->product->name }}</td>
                                         <td class="text-center">{{ $detail->quantity }}</td>
                                         <td>
-                                            {{-- Input jumlah retur tidak berubah, karena sudah benar --}}
-                                            <input type="number" class="form-control form-control-sm" name="items[{{ $detail->id }}][return_quantity]" value="1" min="1" max="{{ $detail->quantity }}" 
-                                                :disabled="!isChecked({{ $detail->id }})" required>
+                                            <input type="number" class="form-control form-control-sm" name="items[{{ $detail->id }}][return_quantity]" value="1" min="1" max="{{ $detail->quantity }}" :disabled="!isChecked({{ $detail->id }})" required>
                                         </td>
                                     </tr>
                                     @endforeach
@@ -73,24 +74,25 @@
                     </div>
                     <div class="card-footer text-end">
                         <button type="submit" class="btn btn-primary" :disabled="checkedItems.length === 0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save-fill me-1" viewBox="0 0 16 16"><path d="M8.5 1.5A1.5 1.5 0 0 1 10 0h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h6c-.314.418-.5.937-.5 1.5v6h-2a.5.5 0 0 0-.354.854l2.5 2.5a.5.5 0 0 0 .708 0l2.5-2.5A.5.5 0 0 0 10.5 7.5h-2z"/></svg>
-                            Proses Retur
+                            <i class="bi bi-save-fill me-1"></i> Proses Retur
                         </button>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
-    </form>
-</div>
+    </x-module-layout>
 
-<script>
-    function returnFormHandler() {
-        return {
-            checkedItems: [],
-            isChecked(id) {
-                return this.checkedItems.includes(id.toString());
+    <x-slot name="scripts">
+        <script>
+            // Menggunakan logika asli yang sederhana dari kode lama Anda yang sudah terbukti bekerja
+            function returnFormHandler() {
+                return {
+                    checkedItems: [],
+                    isChecked(id) {
+                        return this.checkedItems.includes(id.toString());
+                    }
+                }
             }
-        }
-    }
-</script>
-@endsection
+        </script>
+    </x-slot>
+</x-app-layout>
