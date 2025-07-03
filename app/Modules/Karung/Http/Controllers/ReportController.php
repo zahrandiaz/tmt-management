@@ -279,11 +279,11 @@ class ReportController extends Controller
             ->sum('total_amount');
 
         // 2. Dapatkan Total Nilai Retur Penjualan pada periode yang sama
-        $totalReturns = SalesReturn::whereBetween('return_date', [$startDate, $endDate])
+        $totalSalesReturns = SalesReturn::whereBetween('return_date', [$startDate, $endDate])
             ->sum('total_amount');
 
         // 3. Hitung Pendapatan Bersih (Net Revenue)
-        $netRevenue = $totalRevenue - $totalReturns;
+        $netRevenue = $totalRevenue - $totalSalesReturns;
         
         // --- BIAYA BARANG TERJUAL (COGS) ---
         // 4. Dapatkan Total HPP dari semua penjualan yang terjadi
@@ -292,7 +292,7 @@ class ReportController extends Controller
               ->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
         })->sum(DB::raw('quantity * purchase_price_at_sale'));
 
-        // 5. Hitung nilai HPP dari barang yang diretur pada periode yang sama
+        // 5. Hitung nilai HPP dari barang yang diretur (Retur Penjualan)
         $costOfReturnedGoods = SalesReturnDetail::query()
             ->join('karung_sales_returns', 'karung_sales_return_details.sales_return_id', '=', 'karung_sales_returns.id')
             ->join('karung_sales_transaction_details', function ($join) {
@@ -303,25 +303,28 @@ class ReportController extends Controller
             ->selectRaw('SUM(karung_sales_return_details.quantity * karung_sales_transaction_details.purchase_price_at_sale) as total')
             ->value('total') ?? 0;
 
-        // 6. Hitung HPP Bersih (Net COGS)
-        $netCostOfGoodsSold = $totalCostOfGoodsSold - $costOfReturnedGoods;
+        // [BARU v1.32.0] 6. Dapatkan Total Nilai Retur Pembelian (mengurangi biaya)
+        $totalPurchaseReturns = \App\Modules\Karung\Models\PurchaseReturn::whereBetween('return_date', [$startDate, $endDate])
+            ->sum('total_amount');
+
+        // 7. Hitung HPP Bersih (Net COGS)
+        $netCostOfGoodsSold = $totalCostOfGoodsSold - $costOfReturnedGoods - $totalPurchaseReturns;
 
         // --- LABA KOTOR ---
-        // 7. Hitung Laba Kotor (Gross Profit)
+        // 8. Hitung Laba Kotor (Gross Profit)
         $grossProfit = $netRevenue - $netCostOfGoodsSold;
 
         // --- BIAYA OPERASIONAL & LABA BERSIH ---
-        // 8. Dapatkan total biaya operasional
+        // 9. Dapatkan total biaya operasional
         $expensesQuery = OperationalExpense::query();
         if ($startDate) { $expensesQuery->whereDate('date', '>=', $startDate); }
         if ($endDate) { $expensesQuery->whereDate('date', '<=', $endDate); }
         $totalExpenses = $expensesQuery->sum('amount');
         
-        // 9. Hitung Laba Bersih (Net Profit)
+        // 10. Hitung Laba Bersih (Net Profit)
         $netProfit = $grossProfit - $totalExpenses;
         
-        // NOTE: Kalkulasi laba per kategori belum disesuaikan dengan retur untuk saat ini.
-        // Kita akan fokus pada total laporan terlebih dahulu.
+        // NOTE: Kalkulasi laba per kategori tidak diubah, tetap fokus pada total.
         $salesDetails = SalesTransactionDetail::whereHas('transaction', fn ($q) => $q->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']))->get();
         $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
             ->groupBy('product.category.name')
@@ -333,9 +336,9 @@ class ReportController extends Controller
             
         // Kirim semua data baru ke view
         return view('karung::reports.profit_loss_report', compact(
-            'totalRevenue', 'totalReturns', 'netRevenue', // Data Pendapatan Baru
-            'totalCostOfGoodsSold', 'costOfReturnedGoods', 'netCostOfGoodsSold', // Data HPP Baru
-            'grossProfit', 'totalExpenses', 'netProfit', // Hasil Akhir
+            'totalRevenue', 'totalSalesReturns', 'netRevenue', 
+            'totalCostOfGoodsSold', 'costOfReturnedGoods', 'totalPurchaseReturns', 'netCostOfGoodsSold', // [MODIFIKASI v1.32.0]
+            'grossProfit', 'totalExpenses', 'netProfit',
             'salesDetails', 'profitByCategory', 'startDate', 'endDate', 'activePreset'
         ));
     }

@@ -100,6 +100,9 @@ Route::middleware(['permission:karung.manage_returns'])->prefix('returns')->name
     // [BARU] Rute untuk Retur Pembelian
     Route::get('/purchases', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'purchaseReturnIndex'])->name('purchases.index');
     Route::get('/purchases/{purchaseReturn}', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'showPurchaseReturn'])->name('purchases.show');
+    // [BARU v1.32.0] Rute untuk download Nota Debit
+    Route::get('/purchases/{purchaseReturn}/debit-note', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'downloadDebitNotePdf'])->name('purchases.debit_note.pdf');
+
 });
 
 // Rute untuk membuat retur

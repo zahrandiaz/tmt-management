@@ -136,7 +136,8 @@ class PurchaseTransactionController extends Controller
     public function show(PurchaseTransaction $purchase)
     {
         $this->authorize('view', $purchase);
-        $purchase->load(['supplier', 'user', 'details.product']);
+        // [MODIFIKASI v1.32.0] Eager load relasi 'returns' untuk ditampilkan di view
+        $purchase->load(['supplier', 'user', 'details.product', 'returns']); 
         return view('karung::purchases.show', compact('purchase'));
     }
 
