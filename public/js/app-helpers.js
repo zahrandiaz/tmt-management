@@ -33,3 +33,22 @@ document.addEventListener('DOMContentLoaded', function () {
     // Panggil fungsi untuk mengaktifkan event listener
     setupFormConfirmation();
 });
+
+/**
+ * Membuat dan mengembalikan instance TomSelect dengan konfigurasi umum.
+ * @param {HTMLElement} element - Elemen <input> atau <select> yang akan diinisialisasi.
+ * @param {object} config - Konfigurasi spesifik untuk instance ini.
+ * @returns {TomSelect}
+ */
+function createTomSelect(element, config) {
+    const defaultConfig = {
+        placeholder: '-- Pilih atau Cari --',
+        maxItems: 1,
+        // Tambahkan opsi default lain jika ada
+    };
+
+    // Gabungkan config default dengan config spesifik
+    const finalConfig = { ...defaultConfig, ...config };
+
+    return new TomSelect(element, finalConfig);
+}

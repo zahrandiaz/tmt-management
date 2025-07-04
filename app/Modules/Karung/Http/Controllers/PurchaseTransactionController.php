@@ -2,7 +2,7 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ModuleBaseController;
 use App\Modules\Karung\Http\Requests\StorePurchaseTransactionRequest;
 use App\Modules\Karung\Http\Requests\UpdatePurchaseTransactionRequest;
 use App\Modules\Karung\Models\Product;
@@ -11,7 +11,7 @@ use App\Modules\Karung\Models\Supplier;
 use App\Modules\Karung\Services\TransactionService;
 use Illuminate\Http\Request;
 
-class PurchaseTransactionController extends Controller
+class PurchaseTransactionController extends ModuleBaseController
 {
     protected $transactionService;
 

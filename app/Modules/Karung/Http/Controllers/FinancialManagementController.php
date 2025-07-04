@@ -2,14 +2,14 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ModuleBaseController;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction;
-use App\Modules\Karung\Models\PaymentHistory;
-use App\Modules\Karung\Services\PaymentService; // [BARU v1.32.1]
+use App\Models\PaymentHistory;
+use App\Services\PaymentService;
 use Illuminate\Http\Request;
 
-class FinancialManagementController extends Controller
+class FinancialManagementController extends ModuleBaseController
 {
     protected $paymentService; // [BARU v1.32.1]
 

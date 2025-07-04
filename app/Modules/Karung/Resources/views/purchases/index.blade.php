@@ -30,7 +30,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            @include('karung::components.flash-message')
+                            <x-flash-message />
 
                             <ul class="nav nav-tabs mb-3">
                                 <li class="nav-item">

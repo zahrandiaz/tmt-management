@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Modules\Karung\Services;
+namespace App\Services;
 
-use App\Modules\Karung\Models\PaymentHistory;
+use App\Models\PaymentHistory;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction;
 use Illuminate\Http\Request;

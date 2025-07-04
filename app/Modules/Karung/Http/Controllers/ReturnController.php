@@ -2,18 +2,18 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ModuleBaseController;
 use App\Modules\Karung\Http\Requests\StorePurchaseReturnRequest;
 use App\Modules\Karung\Http\Requests\StoreSalesReturnRequest;
 use App\Modules\Karung\Models\PurchaseReturn;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesReturn;
 use App\Modules\Karung\Models\SalesTransaction;
-use App\Modules\Karung\Models\Setting;
+use App\Models\Setting;
 use App\Modules\Karung\Services\ReturnService; // [BARU v1.32.1]
 use Barryvdh\DomPDF\Facade\Pdf;
 
-class ReturnController extends Controller
+class ReturnController extends ModuleBaseController
 {
     protected $returnService; // [BARU v1.32.1]
 

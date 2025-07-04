@@ -47,7 +47,12 @@
                             <div class="row mb-4">
                                  <div class="col-md-6">
                                     <label for="purchase_reference_no" class="form-label">No. Referensi/Faktur Supplier (Opsional)</label>
-                                    <input type="text" class="form-control" name="purchase_reference_no" value="{{ old('purchase_reference_no') }}">
+                                    <input type="text" class="form-control @error('purchase_reference_no') is-invalid @enderror" name="purchase_reference_no" value="{{ old('purchase_reference_no') }}">
+                                    @error('purchase_reference_no')
+                                        <div class="invalid-feedback">
+                                            {{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
                                 <div class="col-md-6">
                                     <label for="notes" class="form-label">Catatan (Opsional)</label>

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request;
 use App\Modules\Karung\Models\Product;
 use App\Modules\Karung\Models\StockAdjustment;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
-class StockAdjustmentController extends Controller
+class StockAdjustmentController extends ModuleBaseController
 {
     /**
      * Display a listing of the resource.

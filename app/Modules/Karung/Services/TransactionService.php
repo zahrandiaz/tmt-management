@@ -2,6 +2,7 @@
 
 namespace App\Modules\Karung\Services;
 
+use App\Services\StockManagementService;
 use App\Modules\Karung\Models\Customer;
 use App\Modules\Karung\Models\Product;
 use App\Modules\Karung\Models\PurchaseTransaction;

@@ -4,7 +4,7 @@ namespace App\Modules\Karung\Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Modules\Karung\Models\Setting;
+use App\Models\Setting;
 
 class KarungSettingsSeeder extends Seeder
 {

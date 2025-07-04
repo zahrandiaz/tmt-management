@@ -6,7 +6,7 @@ use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Modules\Karung\Services\StockManagementService;
 use App\Modules\Karung\Models\Product;
-use App\Modules\Karung\Models\Setting;
+use App\Models\Setting;
 use App\Modules\Karung\Models\ProductCategory;
 use App\Modules\Karung\Models\ProductType;
 use App\Modules\Karung\Models\SalesTransaction;
