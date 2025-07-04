@@ -13,15 +13,13 @@ use App\Exports\SalesReportExport;
 use App\Exports\PurchasesReportExport;
 use App\Exports\StockReportExport;
 use App\Exports\ProfitLossReportExport;
-use Barryvdh\DomPDF\Facade\Pdf; // <-- [BARU] Import facade PDF
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\User;
 use App\Modules\Karung\Models\Customer;
 use App\Modules\Karung\Models\ProductCategory;
 use App\Modules\Karung\Models\Supplier;
 use App\Modules\Karung\Models\SalesTransactionDetail;
 use App\Modules\Karung\Models\PurchaseTransactionDetail;
-use App\Modules\Karung\Models\SalesReturn; // <-- [BARU]
-use App\Modules\Karung\Models\SalesReturnDetail; // <-- [BARU]
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Karung\Models\OperationalExpense;
@@ -29,9 +27,17 @@ use Illuminate\Support\Facades\Storage;
 use App\Jobs\ExportSalesReportJob;
 use App\Models\ExportedReport;
 use App\Modules\Karung\Models\Setting;
+use App\Modules\Karung\Services\ProfitLossReportService; // <-- [BARU v1.32.1]
 
 class ReportController extends Controller
 {
+    protected $profitLossReportService; // <-- [BARU v1.32.1]
+
+    public function __construct(ProfitLossReportService $profitLossReportService) // <-- [MODIFIKASI v1.32.1]
+    {
+        $this->profitLossReportService = $profitLossReportService; // <-- [BARU v1.32.1]
+    }
+
     private function getDateRange(Request $request): array
     {
         $preset = $request->input('preset');
@@ -59,12 +65,10 @@ class ReportController extends Controller
                     break;
             }
         } elseif (!$startDate && !$endDate) {
-            // Default ke hari ini jika tidak ada filter manual atau preset
             $startDate = now()->format('Y-m-d');
             $endDate = now()->format('Y-m-d');
-            $preset = 'today'; // Set preset aktif
+            $preset = 'today';
         } else {
-            // Jika ada filter manual, preset dianggap custom
             $preset = 'custom';
         }
 
@@ -85,9 +89,8 @@ class ReportController extends Controller
         $selectedCustomerId = $request->input('customer_id');
         $selectedUserId = $request->input('user_id');
 
-        // [MODIFIKASI] Query utama dengan kalkulasi HPP Akurat
         $query = SalesTransaction::with(['customer', 'user', 'details'])
-            ->withSum('details as total_cost', DB::raw('quantity * purchase_price_at_sale')) // Kalkulasi HPP akurat di database
+            ->withSum('details as total_cost', DB::raw('quantity * purchase_price_at_sale'))
             ->where('status', 'Completed');
 
         if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
@@ -95,7 +98,6 @@ class ReportController extends Controller
         if ($selectedCustomerId) { $query->where('customer_id', $selectedCustomerId); }
         if ($selectedUserId) { $query->where('user_id', $selectedUserId); }
 
-        // [MODIFIKASI] Kalkulasi total ringkasan menjadi lebih efisien
         $queryForTotals = clone $query;
         $summary = $queryForTotals->select(
                 DB::raw('COUNT(*) as total_transactions'),
@@ -126,16 +128,11 @@ class ReportController extends Controller
         $customerId = $request->input('customer_id');
         $userId = $request->input('user_id');
         
-        // [MODIFIKASI] Kirim data user yang sedang login ke dalam Job
         ExportSalesReportJob::dispatch(auth()->user(), $startDate, $endDate, $customerId, $userId);
 
         return redirect()->back()->with('success', 'Laporan Anda sedang diproses. Anda akan diberi notifikasi jika sudah selesai.');
     }
 
-
-    /**
-     * [BARU] Method untuk menangani permintaan export laporan penjualan ke PDF.
-     */
     public function exportSalesPdf(Request $request)
     {
         $settings = Setting::pluck('setting_value', 'setting_key');
@@ -144,9 +141,8 @@ class ReportController extends Controller
         $customerId = $request->input('customer_id');
         $userId = $request->input('user_id');
 
-        // [MODIFIKASI] Query PDF juga menggunakan kalkulasi HPP Akurat
         $query = SalesTransaction::with(['customer', 'user', 'details'])
-            ->withSum('details as total_cost', DB::raw('quantity * purchase_price_at_sale')) // Kalkulasi HPP akurat di database
+            ->withSum('details as total_cost', DB::raw('quantity * purchase_price_at_sale'))
             ->where('status', 'Completed');
 
         if ($startDate) { $query->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
@@ -156,16 +152,14 @@ class ReportController extends Controller
 
         $sales = $query->latest('transaction_date')->get();
         
-        // [MODIFIKASI] Kalkulasi ringkasan untuk PDF
         $totalRevenue = $sales->sum('total_amount');
-        $totalCost = $sales->sum('total_cost'); // Ambil dari hasil withSum
+        $totalCost = $sales->sum('total_cost');
         $grossProfit = $totalRevenue - $totalCost;
         
         $pdf = PDF::loadView('karung::reports.pdf.sales_report_pdf', compact('sales', 'totalRevenue', 'totalCost', 'grossProfit', 'startDate', 'endDate', 'settings'));
         $fileName = 'Laporan_Penjualan_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
-
 
     public function purchases(Request $request)
     {
@@ -198,7 +192,7 @@ class ReportController extends Controller
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $supplierId = $request->input('supplier_id'); // [BARU] Ambil filter supplier
+        $supplierId = $request->input('supplier_id');
         
         $fileName = 'Laporan_Pembelian_Detail_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
         return Excel::download(new PurchasesReportExport($startDate, $endDate, $supplierId), $fileName);
@@ -209,7 +203,7 @@ class ReportController extends Controller
         $settings = Setting::pluck('setting_value', 'setting_key');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $supplierId = $request->input('supplier_id'); // [BARU] Ambil filter supplier
+        $supplierId = $request->input('supplier_id');
 
         $query = PurchaseTransaction::with(['supplier', 'user', 'details.product'])->where('status', 'Completed');
 
@@ -241,14 +235,14 @@ class ReportController extends Controller
         return view('karung::reports.stock_report', compact('products', 'categories', 'selectedCategoryId'));
     }
 
-    public function exportStock(Request $request) // <-- Tambahkan Request
+    public function exportStock(Request $request)
     {
         $categoryId = $request->input('category_id');
         $fileName = 'Laporan_Stok_Produk_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
         return Excel::download(new StockReportExport($categoryId), $fileName);
     }
 
-    public function exportStockPdf(Request $request) // <-- Tambahkan Request
+    public function exportStockPdf(Request $request)
     {
         $settings = Setting::pluck('setting_value', 'setting_key');
         $categoryId = $request->input('category_id');
@@ -272,74 +266,17 @@ class ReportController extends Controller
         $endDate = $dateRange['endDate'];
         $activePreset = $dateRange['activePreset'];
         
-        // --- PENDAPATAN ---
-        // 1. Dapatkan Total Pendapatan Kotor (Gross Revenue) dari transaksi yang selesai
-        $totalRevenue = SalesTransaction::where('status', 'Completed')
-            ->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->sum('total_amount');
-
-        // 2. Dapatkan Total Nilai Retur Penjualan pada periode yang sama
-        $totalSalesReturns = SalesReturn::whereBetween('return_date', [$startDate, $endDate])
-            ->sum('total_amount');
-
-        // 3. Hitung Pendapatan Bersih (Net Revenue)
-        $netRevenue = $totalRevenue - $totalSalesReturns;
+        // [REFACTOR v1.32.1] Panggil service untuk mendapatkan semua data laporan
+        $reportData = $this->profitLossReportService->generate($startDate, $endDate);
         
-        // --- BIAYA BARANG TERJUAL (COGS) ---
-        // 4. Dapatkan Total HPP dari semua penjualan yang terjadi
-        $totalCostOfGoodsSold = SalesTransactionDetail::whereHas('transaction', function($q) use ($startDate, $endDate) {
-            $q->where('status', 'Completed')
-              ->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-        })->sum(DB::raw('quantity * purchase_price_at_sale'));
-
-        // 5. Hitung nilai HPP dari barang yang diretur (Retur Penjualan)
-        $costOfReturnedGoods = SalesReturnDetail::query()
-            ->join('karung_sales_returns', 'karung_sales_return_details.sales_return_id', '=', 'karung_sales_returns.id')
-            ->join('karung_sales_transaction_details', function ($join) {
-                $join->on('karung_sales_returns.sales_transaction_id', '=', 'karung_sales_transaction_details.sales_transaction_id')
-                     ->on('karung_sales_return_details.product_id', '=', 'karung_sales_transaction_details.product_id');
-            })
-            ->whereBetween('karung_sales_returns.return_date', [$startDate, $endDate])
-            ->selectRaw('SUM(karung_sales_return_details.quantity * karung_sales_transaction_details.purchase_price_at_sale) as total')
-            ->value('total') ?? 0;
-
-        // [BARU v1.32.0] 6. Dapatkan Total Nilai Retur Pembelian (mengurangi biaya)
-        $totalPurchaseReturns = \App\Modules\Karung\Models\PurchaseReturn::whereBetween('return_date', [$startDate, $endDate])
-            ->sum('total_amount');
-
-        // 7. Hitung HPP Bersih (Net COGS)
-        $netCostOfGoodsSold = $totalCostOfGoodsSold - $costOfReturnedGoods - $totalPurchaseReturns;
-
-        // --- LABA KOTOR ---
-        // 8. Hitung Laba Kotor (Gross Profit)
-        $grossProfit = $netRevenue - $netCostOfGoodsSold;
-
-        // --- BIAYA OPERASIONAL & LABA BERSIH ---
-        // 9. Dapatkan total biaya operasional
-        $expensesQuery = OperationalExpense::query();
-        if ($startDate) { $expensesQuery->whereDate('date', '>=', $startDate); }
-        if ($endDate) { $expensesQuery->whereDate('date', '<=', $endDate); }
-        $totalExpenses = $expensesQuery->sum('amount');
-        
-        // 10. Hitung Laba Bersih (Net Profit)
-        $netProfit = $grossProfit - $totalExpenses;
-        
-        // NOTE: Kalkulasi laba per kategori tidak diubah, tetap fokus pada total.
-        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn ($q) => $q->whereBetween('transaction_date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']))->get();
-        $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
-            ->groupBy('product.category.name')
-            ->map(function ($details, $categoryName) {
-                $rev = $details->sum('sub_total');
-                $cost = $details->sum(fn($d) => $d->quantity * $d->purchase_price_at_sale);
-                return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
-            })->sortByDesc('total_profit');
-            
-        // Kirim semua data baru ke view
-        return view('karung::reports.profit_loss_report', compact(
-            'totalRevenue', 'totalSalesReturns', 'netRevenue', 
-            'totalCostOfGoodsSold', 'costOfReturnedGoods', 'totalPurchaseReturns', 'netCostOfGoodsSold', // [MODIFIKASI v1.32.0]
-            'grossProfit', 'totalExpenses', 'netProfit',
-            'salesDetails', 'profitByCategory', 'startDate', 'endDate', 'activePreset'
+        // Kirim semua data ke view
+        return view('karung::reports.profit_loss_report', array_merge(
+            $reportData,
+            [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'activePreset' => $activePreset
+            ]
         ));
     }
 
@@ -348,42 +285,8 @@ class ReportController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        $salesQuery = SalesTransaction::where('status', 'Completed');
-        if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        
-        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn($q) => $q->whereIn('id', $salesQuery->pluck('id')))
-            ->with(['product.category', 'transaction'])->get();
-        
-        $totalRevenue = $salesDetails->sum('sub_total');
-
-        // [MODIFIKASI] Kalkulasi Total HPP Akurat disamakan dengan method utama
-        $totalCost = $salesDetails->sum(fn($detail) => $detail->quantity * $detail->purchase_price_at_sale);
-        
-        $grossProfit = $totalRevenue - $totalCost;
-
-        $expensesQuery = OperationalExpense::query();
-        if ($startDate) { $expensesQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $expensesQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
-        $totalExpenses = $expensesQuery->sum('amount');
-
-        $netProfit = $grossProfit - $totalExpenses;
-
-        // [MODIFIKASI] Kalkulasi Laba per Kategori Akurat disamakan dengan method utama
-        $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
-            ->groupBy('product.category.name')
-            ->map(function ($details, $categoryName) {
-                $rev = $details->sum('sub_total');
-                $cost = $details->sum(fn($d) => $d->quantity * $d->purchase_price_at_sale);
-                return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
-            })->sortByDesc('total_profit');
-
-        $exportData = [
-            'totalRevenue' => $totalRevenue, 'totalCost' => $totalCost,
-            'grossProfit' => $grossProfit, 'totalExpenses' => $totalExpenses,
-            'netProfit' => $netProfit, 'profitByCategory' => $profitByCategory,
-            'salesDetails' => $salesDetails,
-        ];
+        // [REFACTOR v1.32.1] Gunakan service untuk mendapatkan data
+        $exportData = $this->profitLossReportService->generate($startDate, $endDate);
 
         $fileName = 'Laporan_Laba_Rugi_' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
         return Excel::download(new ProfitLossReportExport($exportData), $fileName);
@@ -395,45 +298,23 @@ class ReportController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        $salesQuery = SalesTransaction::where('status', 'Completed');
-        if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
+        // [REFACTOR v1.32.1] Gunakan service untuk mendapatkan data
+        $reportData = $this->profitLossReportService->generate($startDate, $endDate);
 
-        $salesDetails = SalesTransactionDetail::whereHas('transaction', fn($q) => $q->whereIn('id', $salesQuery->pluck('id')))
-            ->with('product.category')->get();
-        
-        $totalRevenue = $salesDetails->sum('sub_total');
-        
-        // [MODIFIKASI] Kalkulasi Total HPP Akurat disamakan dengan method utama
-        $totalCost = $salesDetails->sum(fn($detail) => $detail->quantity * $detail->purchase_price_at_sale);
-
-        $grossProfit = $totalRevenue - $totalCost;
-
-        $expensesQuery = OperationalExpense::query();
-        if ($startDate) { $expensesQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $expensesQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
-        $totalExpenses = $expensesQuery->sum('amount');
-        $expensesDetails = $expensesQuery->get();
-
-        $netProfit = $grossProfit - $totalExpenses;
-
-        // [MODIFIKASI] Kalkulasi Laba per Kategori Akurat disamakan dengan method utama
-        $profitByCategory = $salesDetails->filter(fn($d) => $d->product && $d->product->category)
-            ->groupBy('product.category.name')
-            ->map(function ($details, $categoryName) {
-                $rev = $details->sum('sub_total');
-                $cost = $details->sum(fn($d) => $d->quantity * $d->purchase_price_at_sale);
-                return ['category_name' => $categoryName, 'total_profit' => $rev - $cost];
-            })->sortByDesc('total_profit');
-
-        $pdf = PDF::loadView('karung::reports.pdf.profit_loss_report_pdf', compact('totalRevenue', 'totalCost', 'grossProfit', 'profitByCategory', 'salesDetails', 'totalExpenses', 'expensesDetails', 'netProfit', 'startDate', 'endDate', 'settings'));
+        $pdf = PDF::loadView('karung::reports.pdf.profit_loss_report_pdf', array_merge(
+            $reportData,
+            [
+                'settings' => $settings,
+                'startDate' => $startDate,
+                'endDate' => $endDate
+            ]
+        ));
         $fileName = 'Laporan_Laba_Rugi_Detail_' . Carbon::now()->format('Y-m-d') . '.pdf';
         return $pdf->download($fileName);
     }
 
     public function stockHistory(Request $request, Product $product)
     {
-        // Ambil semua detail penjualan untuk produk ini
         $salesDetails = SalesTransactionDetail::with('transaction')
             ->where('product_id', $product->id)
             ->whereHas('transaction', function ($q) {
@@ -451,7 +332,6 @@ class ReportController extends Controller
                 ];
             });
 
-        // Ambil semua detail pembelian untuk produk ini
         $purchaseDetails = PurchaseTransactionDetail::with('transaction')
             ->where('product_id', $product->id)
             ->whereHas('transaction', function ($q) {
@@ -469,7 +349,6 @@ class ReportController extends Controller
                 ];
             });
 
-        // Gabungkan kedua koleksi dan urutkan berdasarkan tanggal
         $stockHistory = (new Collection($salesDetails->concat($purchaseDetails)))->sortBy('date');
 
         return view('karung::reports.stock_history', compact('product', 'stockHistory'));
@@ -480,7 +359,6 @@ class ReportController extends Controller
         $sortBy = $request->input('sort_by', 'total_spent');
         $sortOrder = $request->input('sort_order', 'desc');
 
-        // [PERBAIKAN] Mengganti 'sales' menjadi 'salesTransactions'
         $customers = Customer::where('name', '!=', 'Pelanggan Umum')
             ->withCount(['salesTransactions as transaction_count' => function ($query) {
                 $query->where('status', 'Completed');
@@ -502,7 +380,6 @@ class ReportController extends Controller
         $sortBy = $request->input('sort_by', 'total_profit');
         $sortOrder = $request->input('sort_order', 'desc');
 
-        // Kode ini sekarang akan bekerja karena relasi 'salesDetails' sudah kita tambahkan di Model Product
         $products = Product::where('is_active', true)
             ->withSum(['salesDetails as units_sold' => function ($query) {
                 $query->whereHas('transaction', fn($q) => $q->where('status', 'Completed'));
@@ -530,19 +407,16 @@ class ReportController extends Controller
         $endDate = $dateRange['endDate'];
         $activePreset = $dateRange['activePreset'];
 
-        // Menghitung Pemasukan dari Penjualan (sudah benar)
         $salesQuery = SalesTransaction::where('status', 'Completed');
         if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         $totalIncome = $salesQuery->sum('amount_paid');
 
-        // [FIX] Menghitung Pengeluaran dari Pembelian (sekarang sudah akurat)
         $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
         if ($startDate) { $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         $purchaseExpense = $purchaseQuery->sum('amount_paid');
         
-        // Menghitung Biaya Operasional (sudah benar)
         $operationalExpenseQuery = OperationalExpense::query();
         if ($startDate) { $operationalExpenseQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $operationalExpenseQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
@@ -551,14 +425,12 @@ class ReportController extends Controller
         $totalExpense = $purchaseExpense + $operationalExpense;
         $netCashFlow = $totalIncome - $totalExpense;
 
-        // [BARU] Mengambil data Piutang (Penjualan Belum Lunas)
         $receivablesQuery = SalesTransaction::where('status', 'Completed')
             ->where('payment_status', 'Belum Lunas');
         if ($startDate) { $receivablesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
         if ($endDate) { $receivablesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
         $pendingReceivables = $receivablesQuery->with('customer')->get();
 
-        // [BARU] Mengambil data Utang (Pembelian Belum Lunas)
         $payablesQuery = PurchaseTransaction::where('status', 'Completed')
             ->where('payment_status', 'Belum Lunas');
         if ($startDate) { $payablesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
@@ -569,60 +441,48 @@ class ReportController extends Controller
         return view('karung::reports.cash_flow_report', compact(
             'totalIncome', 'purchaseExpense', 'operationalExpense', 
             'netCashFlow', 'startDate', 'endDate', 'activePreset',
-            'pendingReceivables', 'pendingPayables' // <-- [BARU] Kirim data baru ke view
+            'pendingReceivables', 'pendingPayables'
         ));
     }
 
     public function downloadCenter()
     {
-        $this->authorize('viewAny', SalesTransaction::class); // Ganti dengan otorisasi yang sesuai jika perlu
+        $this->authorize('viewAny', SalesTransaction::class);
 
         $exportedReports = ExportedReport::where('user_id', auth()->id())
-                                         ->latest()
-                                         ->paginate(15);
+                                              ->latest()
+                                              ->paginate(15);
 
         return view('karung::reports.download_center', compact('exportedReports'));
     }
 
     public function downloadExportedReport($filename)
     {
-        // Tentukan path file di dalam storage
         $path = 'public/report_exports/' . $filename;
 
-        // Pastikan file ada dan pengguna yang meminta adalah pemilik file (opsional, untuk keamanan tambahan)
-        // Untuk sekarang, kita hanya cek keberadaan file
         if (!Storage::exists($path)) {
             abort(404, 'File tidak ditemukan.');
         }
 
-        // Kembalikan file sebagai download
         return Storage::download($path);
     }
 
-    /**
-     * [MODIFIKASI v1.26] Menghapus file laporan yang diekspor dan catatannya.
-     * Memperbaiki bug di mana file fisik tidak terhapus dari storage.
-     */
     public function destroyExportedReport(ExportedReport $report)
     {
         try {
-            // Tentukan path file yang benar secara manual di dalam disk 'public'
             $filePath = 'report_exports/' . $report->filename;
 
-            // Hapus file fisik dari storage jika ada
             if (Storage::disk('public')->exists($filePath)) {
                 Storage::disk('public')->delete($filePath);
             }
 
-            // Hapus catatan dari database
             $report->delete();
 
             return redirect()->route('karung.reports.download_center')->with('success', 'Riwayat dan file laporan berhasil dihapus.');
 
         } catch (\Exception $e) {
-            // Beri pesan error yang lebih informatif jika terjadi kesalahan
-            report($e); // Optional: log error untuk debugging
+            report($e);
             return redirect()->route('karung.reports.download_center')->with('error', 'Terjadi kesalahan saat mencoba menghapus laporan.');
         }
     }
- }
+}

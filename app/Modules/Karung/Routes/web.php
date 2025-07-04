@@ -48,13 +48,11 @@ Route::resource('stock-adjustments', StockAdjustmentController::class)
 Route::resource('purchases', PurchaseTransactionController::class)->middleware('permission:karung.access_module');
 Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])->name('purchases.cancel');
 Route::post('purchases/{purchase}/restore', [PurchaseTransactionController::class, 'restore'])->name('purchases.restore');
-Route::post('purchases/{purchase}/pay', [PurchaseTransactionController::class, 'updatePayment'])->name('purchases.update_payment');
 
 // Rute Transaksi Penjualan
 Route::resource('sales', SalesTransactionController::class)->middleware('permission:karung.access_module');
 Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])->name('sales.cancel');
 Route::post('sales/{sale}/restore', [SalesTransactionController::class, 'restore'])->name('sales.restore');
-Route::post('sales/{sale}/pay', [SalesTransactionController::class, 'updatePayment'])->name('sales.update_payment');
 Route::get('sales/{sale}/print-thermal', [SalesTransactionController::class, 'printThermal'])->name('sales.print.thermal')->middleware('permission:karung.view_sales');
 Route::get('sales/{sale}/download-pdf', [SalesTransactionController::class, 'downloadPdf'])->name('sales.download.pdf')->middleware('permission:karung.view_sales');
 
