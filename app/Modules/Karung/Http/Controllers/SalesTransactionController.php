@@ -2,19 +2,19 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ModuleBaseController;
 use App\Modules\Karung\Http\Requests\StoreSalesTransactionRequest;
 use App\Modules\Karung\Http\Requests\UpdateSalesTransactionRequest;
 use App\Modules\Karung\Models\Customer;
 use App\Modules\Karung\Models\Product;
 use App\Modules\Karung\Models\SalesTransaction;
-use App\Modules\Karung\Models\Setting;
+use App\Models\Setting;
 use App\Modules\Karung\Services\TransactionService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
-class SalesTransactionController extends Controller
+class SalesTransactionController extends ModuleBaseController
 {
     protected $transactionService;
 

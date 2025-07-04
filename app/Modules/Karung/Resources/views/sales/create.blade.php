@@ -26,7 +26,7 @@
                             <h5 class="mb-0">Formulir Transaksi Penjualan</h5>
                         </div>
                         <div class="card-body">
-                            @include('karung::components.flash-message')
+                            <x-flash-message />
 
                             {{-- Data Utama Transaksi --}}
                             <div class="row mb-3">
@@ -250,10 +250,8 @@
                         payment_status: config.payment_status || 'Lunas',
                         amount_paid: config.amount_paid || 0,
                         initTomSelect(element, index) {
-                            const tomSelect = new TomSelect(element, {
+                            const tomSelect = createTomSelect(element, {
                                 options: config.productsData,
-                                placeholder: '-- Pilih atau Cari Produk --',
-                                maxItems: 1,
                                 onChange: (value) => this.productChanged(index, value),
                             });
                             this.tomSelectInstances[index] = tomSelect;

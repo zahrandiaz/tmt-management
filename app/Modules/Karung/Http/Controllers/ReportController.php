@@ -2,7 +2,7 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request;
 use App\Modules\Karung\Models\SalesTransaction;
 use App\Modules\Karung\Models\PurchaseTransaction;
@@ -26,10 +26,10 @@ use App\Modules\Karung\Models\OperationalExpense;
 use Illuminate\Support\Facades\Storage;
 use App\Jobs\ExportSalesReportJob;
 use App\Models\ExportedReport;
-use App\Modules\Karung\Models\Setting;
+use App\Models\Setting;
 use App\Modules\Karung\Services\ProfitLossReportService; // <-- [BARU v1.32.1]
 
-class ReportController extends Controller
+class ReportController extends ModuleBaseController
 {
     protected $profitLossReportService; // <-- [BARU v1.32.1]
 
