@@ -27,15 +27,20 @@ use Illuminate\Support\Facades\Storage;
 use App\Jobs\ExportSalesReportJob;
 use App\Models\ExportedReport;
 use App\Models\Setting;
-use App\Modules\Karung\Services\ProfitLossReportService; // <-- [BARU v1.32.1]
+use App\Services\ProfitLossReportService;
+use App\Services\CashFlowReportService;
 
 class ReportController extends ModuleBaseController
 {
-    protected $profitLossReportService; // <-- [BARU v1.32.1]
+    protected $profitLossReportService;
+    protected $cashFlowReportService; // <-- Tambahkan property baru
 
-    public function __construct(ProfitLossReportService $profitLossReportService) // <-- [MODIFIKASI v1.32.1]
-    {
-        $this->profitLossReportService = $profitLossReportService; // <-- [BARU v1.32.1]
+    public function __construct(
+        ProfitLossReportService $profitLossReportService,
+        CashFlowReportService $cashFlowReportService // <-- Tambahkan parameter baru
+    ) {
+        $this->profitLossReportService = $profitLossReportService;
+        $this->cashFlowReportService = $cashFlowReportService; // <-- Simpan instance baru
     }
 
     private function getDateRange(Request $request): array
@@ -407,41 +412,16 @@ class ReportController extends ModuleBaseController
         $endDate = $dateRange['endDate'];
         $activePreset = $dateRange['activePreset'];
 
-        $salesQuery = SalesTransaction::where('status', 'Completed');
-        if ($startDate) { $salesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $salesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        $totalIncome = $salesQuery->sum('amount_paid');
+        // Panggil service untuk mendapatkan semua data laporan arus kas
+        $reportData = $this->cashFlowReportService->generate($startDate, $endDate);
 
-        $purchaseQuery = PurchaseTransaction::where('status', 'Completed');
-        if ($startDate) { $purchaseQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $purchaseQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        $purchaseExpense = $purchaseQuery->sum('amount_paid');
-        
-        $operationalExpenseQuery = OperationalExpense::query();
-        if ($startDate) { $operationalExpenseQuery->whereDate('date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $operationalExpenseQuery->whereDate('date', '<=', Carbon::parse($endDate)); }
-        $operationalExpense = $operationalExpenseQuery->sum('amount');
-
-        $totalExpense = $purchaseExpense + $operationalExpense;
-        $netCashFlow = $totalIncome - $totalExpense;
-
-        $receivablesQuery = SalesTransaction::where('status', 'Completed')
-            ->where('payment_status', 'Belum Lunas');
-        if ($startDate) { $receivablesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $receivablesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        $pendingReceivables = $receivablesQuery->with('customer')->get();
-
-        $payablesQuery = PurchaseTransaction::where('status', 'Completed')
-            ->where('payment_status', 'Belum Lunas');
-        if ($startDate) { $payablesQuery->whereDate('transaction_date', '>=', Carbon::parse($startDate)); }
-        if ($endDate) { $payablesQuery->whereDate('transaction_date', '<=', Carbon::parse($endDate)); }
-        $pendingPayables = $payablesQuery->with('supplier')->get();
-
-
-        return view('karung::reports.cash_flow_report', compact(
-            'totalIncome', 'purchaseExpense', 'operationalExpense', 
-            'netCashFlow', 'startDate', 'endDate', 'activePreset',
-            'pendingReceivables', 'pendingPayables'
+        return view('karung::reports.cash_flow_report', array_merge(
+            $reportData,
+            [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'activePreset' => $activePreset,
+            ]
         ));
     }
 
