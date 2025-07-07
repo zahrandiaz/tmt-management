@@ -8,5 +8,6 @@ return [
     // App\Providers\EventServiceProvider::class, // Sama seperti di atas
 
     App\Modules\Karung\Providers\KarungServiceProvider::class, // <-- INI YANG BENAR
+    App\Modules\KarungCabang\KarungCabangServiceProvider::class, // <-- TAMBAHKAN BARIS INI
     App\Providers\AuthServiceProvider::class,
 ];
