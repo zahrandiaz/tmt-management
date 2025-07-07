@@ -2,12 +2,12 @@
 
 namespace App\Modules\Karung\Http\Controllers; // <--- NAMESPACE DIPERBAIKI
 
-use App\Modules\Karung\Models\ProductCategory; // <--- USE STATEMENT MODEL DIPERBAIKI
-use App\Http\Controllers\Controller;
+use App\Models\ProductCategory;
+use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule; // <-- TAMBAHKAN INI untuk validasi unique
 
-class ProductCategoryController extends Controller
+class ProductCategoryController extends ModuleBaseController
 {
     /**
      * Display a listing of the resource.

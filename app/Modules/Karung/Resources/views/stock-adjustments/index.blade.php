@@ -24,7 +24,7 @@
                         </div>
 
                         <div class="card-body">
-                            @include('karung::components.flash-message')
+                            <x-flash-message />
 
                             <div class="table-responsive">
                                 <table class="table table-striped table-hover table-bordered table-sm">

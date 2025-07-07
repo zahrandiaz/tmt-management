@@ -48,13 +48,11 @@ Route::resource('stock-adjustments', StockAdjustmentController::class)
 Route::resource('purchases', PurchaseTransactionController::class)->middleware('permission:karung.access_module');
 Route::post('purchases/{purchase}/cancel', [PurchaseTransactionController::class, 'cancel'])->name('purchases.cancel');
 Route::post('purchases/{purchase}/restore', [PurchaseTransactionController::class, 'restore'])->name('purchases.restore');
-Route::post('purchases/{purchase}/pay', [PurchaseTransactionController::class, 'updatePayment'])->name('purchases.update_payment');
 
 // Rute Transaksi Penjualan
 Route::resource('sales', SalesTransactionController::class)->middleware('permission:karung.access_module');
 Route::post('sales/{sale}/cancel', [SalesTransactionController::class, 'cancel'])->name('sales.cancel');
 Route::post('sales/{sale}/restore', [SalesTransactionController::class, 'restore'])->name('sales.restore');
-Route::post('sales/{sale}/pay', [SalesTransactionController::class, 'updatePayment'])->name('sales.update_payment');
 Route::get('sales/{sale}/print-thermal', [SalesTransactionController::class, 'printThermal'])->name('sales.print.thermal')->middleware('permission:karung.view_sales');
 Route::get('sales/{sale}/download-pdf', [SalesTransactionController::class, 'downloadPdf'])->name('sales.download.pdf')->middleware('permission:karung.view_sales');
 
@@ -100,6 +98,9 @@ Route::middleware(['permission:karung.manage_returns'])->prefix('returns')->name
     // [BARU] Rute untuk Retur Pembelian
     Route::get('/purchases', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'purchaseReturnIndex'])->name('purchases.index');
     Route::get('/purchases/{purchaseReturn}', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'showPurchaseReturn'])->name('purchases.show');
+    // [BARU v1.32.0] Rute untuk download Nota Debit
+    Route::get('/purchases/{purchaseReturn}/debit-note', [\App\Modules\Karung\Http\Controllers\ReturnController::class, 'downloadDebitNotePdf'])->name('purchases.debit_note.pdf');
+
 });
 
 // Rute untuk membuat retur

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Tmt;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Modules\Karung\Models\Setting;
+use App\Models\Setting;
 
 class SettingController extends Controller
 {

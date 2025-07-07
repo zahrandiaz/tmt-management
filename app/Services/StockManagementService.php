@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Modules\Karung\Services;
+namespace App\Services;
 
-use App\Modules\Karung\Models\Product;
-use App\Modules\Karung\Models\Setting;
+use App\Models\Product;
+use App\Models\Setting;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction;
 use App\Modules\Karung\Models\SalesReturn;

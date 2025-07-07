@@ -2,11 +2,11 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Modules\Karung\Models\Product; // Pastikan ini sudah benar
-use App\Modules\Karung\Models\ProductCategory;
-use App\Modules\Karung\Models\ProductType;
-use App\Modules\Karung\Models\Supplier;
-use App\Http\Controllers\Controller;
+use App\Models\Product;
+use App\Models\ProductCategory;
+use App\Models\ProductType;
+use App\Models\Supplier;
+use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request; // Mungkin akan kita gunakan nanti
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str; // Untuk helper string seperti Str::upper, Str::random
@@ -15,7 +15,7 @@ use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Facades\Gate; // <-- TAMBAHKAN INI
 use Illuminate\Support\Facades\DB; // <-- TAMBAHKAN INI JUGA
 
-class ProductController extends Controller
+class ProductController extends ModuleBaseController
 {
     /**
      * Display a listing of the resource.

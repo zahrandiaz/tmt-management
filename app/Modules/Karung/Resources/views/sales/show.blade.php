@@ -66,57 +66,106 @@
                                     </div>
                                 @endif
                             </div>
+                            <hr>
 
-                            {{-- Informasi Pembayaran --}}
-                            <div class="row pt-3 mt-3 border-top">
-                                <h5 class="mb-3">Informasi Pembayaran</h5>
-                                <div class="col-md-4"><p class="mb-1"><strong>Status Pembayaran:</strong>
-                                    @if($sale->payment_status == 'Lunas')
-                                        <span class="badge bg-primary">Lunas</span>
-                                    @else
-                                        <span class="badge bg-warning text-dark">Belum Lunas</span>
-                                    @endif
-                                </p></div>
-                                <div class="col-md-4"><p class="mb-1"><strong>Metode Pembayaran:</strong> {{ $sale->payment_method }}</p></div>
-                                <div class="col-md-4"><p class="mb-1"><strong>Jumlah Dibayar:</strong> Rp {{ number_format($sale->amount_paid, 0, ',', '.') }}</p></div>
-                                @if($sale->payment_status == 'Belum Lunas')
-                                    <div class="col-12 mt-2"><p class="mb-1 fw-bold text-danger"><strong>Sisa Tagihan:</strong> Rp {{ number_format($sale->total_amount - $sale->amount_paid, 0, ',', '.') }}</p></div>
-                                @endif
-                            </div>
-                            <hr class="mb-4">
+                            {{-- [MODIFIKASI TOTAL v1.32.0] Blok Rincian Finansial --}}
+                            <div class="row mt-4">
+                                <div class="col-lg-7">
+                                    <h5 class="mb-3">Rincian Produk yang Dijual</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 5%;">No.</th>
+                                                    <th>Nama Produk</th>
+                                                    <th class="text-center">Jumlah</th>
+                                                    <th class="text-end">Harga Jual</th>
+                                                    <th class="text-end">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @php
+                                                    $originalSubtotal = 0;
+                                                @endphp
+                                                @foreach ($sale->details as $index => $detail)
+                                                    @php
+                                                        $originalSubtotal += $detail->sub_total;
+                                                    @endphp
+                                                    <tr class="{{ $sale->status != 'Completed' ? 'text-muted' : '' }}">
+                                                        <th>{{ $index + 1 }}</th>
+                                                        <td class="{{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">{{ $detail->product?->name ?: 'Produk Telah Dihapus' }}</td>
+                                                        <td class="text-center {{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">{{ $detail->quantity }}</td>
+                                                        <td class="text-end {{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">Rp {{ number_format($detail->selling_price_at_transaction, 0, ',', '.') }}</td>
+                                                        <td class="text-end {{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">Rp {{ number_format($detail->sub_total, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-lg-5">
+                                    <h5 class="mb-3">Ringkasan Pembayaran</h5>
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <table class="table table-borderless">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Subtotal Produk</td>
+                                                        <td class="text-end fw-bold">Rp {{ number_format($originalSubtotal, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                    
+                                                    @if($sale->returns->isNotEmpty())
+                                                        @php
+                                                            $totalReturns = $sale->returns->sum('total_amount');
+                                                        @endphp
+                                                        <tr class="text-danger">
+                                                            <td>
+                                                                Pengurangan dari Retur
+                                                                @foreach($sale->returns as $return)
+                                                                    <br><small class="ms-2"><a href="{{ route('karung.returns.sales.show', $return->id) }}" target="_blank" class="text-reset">- {{ $return->return_code }}</a></small>
+                                                                @endforeach
+                                                            </td>
+                                                            <td class="text-end fw-bold">(- Rp {{ number_format($totalReturns, 0, ',', '.') }})</td>
+                                                        </tr>
+                                                    @endif
 
-                            {{-- Rincian Produk --}}
-                            <h5 class="mb-3">Rincian Produk yang Dijual</h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col" style="width: 5%;">No.</th>
-                                            <th scope="col">Nama Produk</th>
-                                            <th scope="col" class="text-center">Jumlah</th>
-                                            <th scope="col" class="text-end">Harga Jual Satuan</th>
-                                            <th scope="col" class="text-end">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($sale->details as $index => $detail)
-                                            <tr class="{{ $sale->status != 'Completed' ? 'text-muted' : '' }}">
-                                                <th scope="row">{{ $index + 1 }}</th>
-                                                <td class="{{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">{{ $detail->product?->name ?: 'Produk Telah Dihapus' }}</td>
-                                                <td class="text-center {{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">{{ $detail->quantity }}</td>
-                                                <td class="text-end {{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">Rp {{ number_format($detail->selling_price_at_transaction, 0, ',', '.') }}</td>
-                                                <td class="text-end {{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">Rp {{ number_format($detail->sub_total, 0, ',', '.') }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="table-dark">
-                                            <th colspan="4" class="text-end">TOTAL PENJUALAN</th>
-                                            <th class="text-end {{ $sale->status != 'Completed' ? 'text-decoration-line-through' : '' }}">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</th>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                                                    <tr class="border-top">
+                                                        <td class="fw-bold">TOTAL TAGIHAN AKHIR</td>
+                                                        <td class="text-end fw-bolder fs-5">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Jumlah Dibayar</td>
+                                                        <td class="text-end">Rp {{ number_format($sale->amount_paid, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                    <tr class="border-top {{ ($sale->total_amount - $sale->amount_paid) > 0 ? 'table-warning' : 'table-success' }}">
+                                                        <td class="fw-bold">
+                                                            @if( ($sale->amount_paid - $sale->total_amount) > 0 )
+                                                                KELEBIHAN BAYAR
+                                                            @else
+                                                                SISA TAGIHAN
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-end fw-bolder fs-5">
+                                                            Rp {{ number_format(abs($sale->total_amount - $sale->amount_paid), 0, ',', '.') }}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Status Pembayaran</td>
+                                                        <td class="text-end">
+                                                            @if($sale->payment_status == 'Lunas')
+                                                                <span class="badge bg-primary fs-6">Lunas</span>
+                                                            @else
+                                                                <span class="badge bg-warning text-dark fs-6">Belum Lunas</span>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
                         </div>
                     </div>
                 </div>

@@ -12,7 +12,7 @@ use App\Modules\Karung\Models\SalesTransaction;
 use App\Policies\SalesTransactionPolicy;
 use App\Modules\Karung\Models\OperationalExpense;
 use App\Policies\OperationalExpensePolicy;
-use App\Modules\Karung\Models\Product;
+use App\Models\Product;
 use App\Policies\ProductPolicy;
 
 // [BARU v1.27] Import model dan policy untuk retur

@@ -2,11 +2,11 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request;
 use App\Modules\Karung\Models\OperationalExpense;
 
-class OperationalExpenseController extends Controller
+class OperationalExpenseController extends ModuleBaseController
 {
     // Kategori biaya yang telah ditentukan
     private $expenseCategories = ['Gaji', 'Sewa', 'Listrik/Air', 'Internet', 'Pemasaran', 'Transportasi', 'Lain-lain'];

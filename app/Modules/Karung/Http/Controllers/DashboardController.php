@@ -2,15 +2,15 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Modules\Karung\Models\Product;
+use App\Http\Controllers\ModuleBaseController;
+use App\Models\Product;
 use App\Modules\Karung\Models\SalesTransaction;
 use App\Modules\Karung\Models\SalesTransactionDetail; // Ditambahkan
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Activity; // Ditambahkan
 
-class DashboardController extends Controller
+class DashboardController extends ModuleBaseController
 {
     public function index()
     {
@@ -76,7 +76,7 @@ class DashboardController extends Controller
                 ->whereIn('subject_type', [
                     'App\Modules\Karung\Models\SalesTransaction',
                     'App\Modules\Karung\Models\PurchaseTransaction',
-                    'App\Modules\Karung\Models\Product',
+                    'App\Models\Product',
                 ])
                 ->latest()
                 ->limit(5)

@@ -57,48 +57,78 @@
                             </div>
                             <hr>
 
-                            {{-- Ringkasan Laporan --}}
+                            {{-- [MODIFIKASI TOTAL v1.32.0] Ringkasan Laporan dengan Rincian HPP --}}
                             <h5 class="mb-3">Ringkasan Laporan untuk Periode {{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d F Y') : 'Awal' }} s/d {{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d F Y') : 'Akhir' }}</h5>
                             
-                            <div class="row align-items-center mb-4">
-                                <div class="col-md-4">
-                                    <div style="height: 250px;"><canvas id="profitChart"></canvas></div>
+                            <div class="row g-4">
+                                <div class="col-lg-7">
+                                    <table class="table table-sm table-borderless">
+                                        <tbody>
+                                            <tr class="table-light"><td colspan="2" class="fw-bold">PENDAPATAN</td></tr>
+                                            <tr>
+                                                <td class="ps-3">Pendapatan Kotor (Omzet)</td>
+                                                <td class="text-end">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="ps-3">(-) Retur Penjualan</td>
+                                                <td class="text-end text-danger">(-Rp {{ number_format($totalSalesReturns, 0, ',', '.') }})</td>
+                                            </tr>
+                                            <tr class="table-secondary">
+                                                <td class="fw-bold">(=) PENDAPATAN BERSIH</td>
+                                                <td class="text-end fw-bold">Rp {{ number_format($netRevenue, 0, ',', '.') }}</td>
+                                            </tr>
+                                            
+                                            <tr class="table-light mt-3"><td colspan="2" class="fw-bold">BEBAN POKOK PENJUALAN (HPP)</td></tr>
+                                            <tr>
+                                                <td class="ps-3">HPP dari Penjualan</td>
+                                                <td class="text-end">Rp {{ number_format($totalCostOfGoodsSold, 0, ',', '.') }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="ps-3">(-) Pengembalian HPP dari Retur Jual</td>
+                                                <td class="text-end text-danger">(-Rp {{ number_format($costOfReturnedGoods, 0, ',', '.') }})</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="ps-3">(-) Nilai Retur Pembelian</td>
+                                                <td class="text-end text-danger">(-Rp {{ number_format($totalPurchaseReturns, 0, ',', '.') }})</td>
+                                            </tr>
+                                            <tr class="table-secondary">
+                                                <td class="fw-bold">(=) HPP BERSIH</td>
+                                                <td class="text-end fw-bold">Rp {{ number_format($netCostOfGoodsSold, 0, ',', '.') }}</td>
+                                            </tr>
+
+                                            <tr class="table-info">
+                                                <td class="fw-bolder">(=) LABA KOTOR (PENDAPATAN BERSIH - HPP BERSIH)</td>
+                                                <td class="text-end fw-bolder fs-5">Rp {{ number_format($grossProfit, 0, ',', '.') }}</td>
+                                            </tr>
+                                            
+                                            <tr class="table-light mt-3"><td colspan="2" class="fw-bold">BIAYA OPERASIONAL</td></tr>
+                                             <tr>
+                                                <td class="ps-3">(-) Total Biaya</td>
+                                                <td class="text-end text-danger">(-Rp {{ number_format($totalExpenses, 0, ',', '.') }})</td>
+                                            </tr>
+                                            
+                                            <tr class="{{ $netProfit >= 0 ? 'table-primary' : 'table-danger' }}">
+                                                <td class="fw-bolder">(=) LABA BERSIH (LABA KOTOR - BIAYA)</td>
+                                                <td class="text-end fw-bolder fs-4">Rp {{ number_format($netProfit, 0, ',', '.') }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div class="col-md-8">
-                                    <div class="card border-success border-2 mb-2"><div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center"><span>Pendapatan Kotor (Omzet)</span> <span class="fw-bold">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span></div>
-                                    </div></div>
-                                    <div class="card border-warning border-2 mb-2"><div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center"><span>(-) Total Retur Penjualan</span> <span class="fw-bold">Rp {{ number_format($totalReturns, 0, ',', '.') }}</span></div>
-                                    </div></div>
-                                    <div class="card bg-light border-dark border-2 mb-2"><div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center"><span>(=) Pendapatan Bersih</span> <span class="fw-bold fs-5">Rp {{ number_format($netRevenue, 0, ',', '.') }}</span></div>
-                                    </div></div>
-                                     <div class="card border-secondary border-2 mb-2"><div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center"><span>(-) HPP Bersih</span> <span class="fw-bold">Rp {{ number_format($netCostOfGoodsSold, 0, ',', '.') }}</span></div>
-                                    </div></div>
-                                    <div class="card bg-light border-info border-2 mb-2"><div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center"><span>(=) Laba Kotor</span> <span class="fw-bold fs-5 text-info">Rp {{ number_format($grossProfit, 0, ',', '.') }}</span></div>
-                                    </div></div>
-                                     <div class="card border-danger border-2 mb-2"><div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center"><span>(-) Biaya Operasional</span> <span class="fw-bold">Rp {{ number_format($totalExpenses, 0, ',', '.') }}</span></div>
-                                    </div></div>
-                                    <div class="card text-white {{ $netProfit >= 0 ? 'bg-primary' : 'bg-danger' }}"><div class="card-body p-3">
-                                        <div class="d-flex justify-content-between align-items-center"><h6 class="card-title mb-0">(=) LABA BERSIH</h6><p class="card-text fs-4 fw-bold mb-0">Rp {{ number_format($netProfit, 0, ',', '.') }}</p></div>
-                                    </div></div>
+                                <div class="col-lg-5 align-self-center">
+                                    <div style="height: 350px;"><canvas id="profitChart"></canvas></div>
                                 </div>
                             </div>
                             <hr>
                             
                             {{-- Tabel Detail --}}
-                            <h5 class="mb-3">Rincian Laba per Item Terjual</h5>
+                            <h5 class="mb-3 mt-4">Rincian Laba per Item Terjual</h5>
                             <div class="table-responsive">
                                 <table class="table table-striped table-hover table-bordered table-sm">
                                     <thead class="table-dark">
                                         <tr>
                                             <th>Tanggal</th><th>Invoice</th><th>Produk</th><th class="text-center">Jml</th>
-                                            <th class="text-end">Harga Jual</th><th class="text-end">Harga Beli (Ref.)</th>
-                                            <th class="text-end">Laba per Item</th><th class="text-end">Subtotal Laba</th>
+                                            <th class="text-end">Harga Jual</th><th class="text-end">HPP/item</th>
+                                            <th class="text-end">Laba/item</th><th class="text-end">Subtotal Laba</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -124,7 +154,6 @@
                                     </tbody>
                                 </table>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -140,10 +169,10 @@
                     new Chart(ctx, {
                         type: 'doughnut',
                         data: {
-                            labels: ['Laba Kotor', 'HPP Bersih', 'Biaya Operasional'],
+                            labels: ['Laba Bersih', 'HPP Bersih', 'Biaya Operasional'],
                             datasets: [{
                                 data: [
-                                    {{ $grossProfit > 0 ? $grossProfit : 0 }}, 
+                                    {{ $netProfit > 0 ? $netProfit : 0 }}, 
                                     {{ $netCostOfGoodsSold > 0 ? $netCostOfGoodsSold : 0 }},
                                     {{ $totalExpenses > 0 ? $totalExpenses : 0 }}
                                 ],
@@ -162,7 +191,7 @@
                             plugins: {
                                 legend: { position: 'top' },
                                 tooltip: {
-                                     callbacks: {
+                                    callbacks: {
                                         label: function(context) {
                                             let label = context.label || '';
                                             if (label) { label += ': '; }

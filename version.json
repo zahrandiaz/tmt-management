@@ -1,6 +1,6 @@
 {
-    "version": "v1.28",
-    "commit": "56ea61e",
-    "commit_date": "2025-06-24 10:57:03",
-    "branch": "main"
+    "version": "v1.30",
+    "commit": "633db49",
+    "commit_date": "2025-07-04 19:42:10",
+    "branch": "feature\/core\/centralize-master-data"
 }

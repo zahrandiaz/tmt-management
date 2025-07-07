@@ -4,6 +4,7 @@ namespace App\Modules\Karung\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Rules\NoSpaces;
 
 class StorePurchaseTransactionRequest extends FormRequest
 {
@@ -22,7 +23,7 @@ class StorePurchaseTransactionRequest extends FormRequest
         return [
             'transaction_date'      => ['required', 'date'],
             'supplier_id'           => ['nullable', 'integer', 'exists:karung_suppliers,id'],
-            'purchase_reference_no' => ['nullable', 'string', 'max:255'],
+            'purchase_reference_no' => ['nullable', 'string', 'max:255', new NoSpaces],
             'notes'                 => ['nullable', 'string'],
             'attachment_path'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             

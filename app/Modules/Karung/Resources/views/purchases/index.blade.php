@@ -30,7 +30,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            @include('karung::components.flash-message')
+                            <x-flash-message />
 
                             <ul class="nav nav-tabs mb-3">
                                 <li class="nav-item">
@@ -95,27 +95,36 @@
                                                     @if($purchase->status != 'Deleted')
                                                         <a href="{{ route('karung.purchases.show', $purchase->id) }}" class="btn btn-info btn-sm text-white" title="Lihat Detail"><i class="bi bi-eye-fill"></i></a>
                                                         @if($purchase->status == 'Completed')
-                                                            @can('managePayment', $purchase)
-                                                                @if($purchase->payment_status == 'Belum Lunas')
-                                                                    <button type="button" class="btn btn-success btn-sm pay-button"
-                                                                            data-url="{{ route('karung.purchases.update_payment', $purchase->id) }}"
-                                                                            data-sisa="{{ $purchase->total_amount - $purchase->amount_paid }}"
-                                                                            data-invoice="{{ $purchase->purchase_code }}" title="Catat Pembayaran">
+                                                            @if($purchase->payment_status == 'Belum Lunas')
+                                                                @can('managePayment', $purchase)
+                                                                    <button type="button" class="btn btn-success btn-sm" title="Catat Pembayaran"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#paymentModal"
+                                                                            data-transaction-id="{{ $purchase->id }}"
+                                                                            data-transaction-type="purchase"
+                                                                            data-max-amount="{{ $purchase->total_amount - $purchase->amount_paid }}"
+                                                                            data-invoice-number="{{ $purchase->purchase_code }}">
                                                                         <i class="bi bi-cash-coin"></i>
                                                                     </button>
-                                                                @endif
-                                                            @endcan
+                                                                @endcan
+                                                            @endif
                                                             @can('karung.edit_purchases')
                                                                 <a href="{{ route('karung.purchases.edit', $purchase->id) }}" class="btn btn-warning btn-sm" title="Edit Transaksi"><i class="bi bi-pencil-square"></i></a>
                                                             @endcan
                                                             @can('karung.cancel_purchases')
-                                                                <form action="{{ route('karung.purchases.cancel', $purchase->id) }}" method="POST" class="d-inline cancel-form">
+                                                                <form action="{{ route('karung.purchases.cancel', $purchase->id) }}" method="POST" class="d-inline needs-confirmation"
+                                                                      data-confirm-title="Anda yakin?"
+                                                                      data-confirm-text="Transaksi ini akan dibatalkan. Aksi ini tidak dapat diurungkan."
+                                                                      data-confirm-button-text="Ya, Batalkan!">
                                                                     @csrf
                                                                     <button type="submit" class="btn btn-danger btn-sm" title="Batalkan Transaksi"><i class="bi bi-x-circle"></i></button>
                                                                 </form>
                                                             @endcan
                                                             @can('karung.delete_purchases')
-                                                                <form action="{{ route('karung.purchases.destroy', $purchase->id) }}" method="POST" class="d-inline delete-form">
+                                                                <form action="{{ route('karung.purchases.destroy', $purchase->id) }}" method="POST" class="d-inline needs-confirmation"
+                                                                      data-confirm-title="PERINGATAN!"
+                                                                      data-confirm-text="Menghapus transaksi akan menyembunyikannya dari daftar. Anda yakin?"
+                                                                      data-confirm-button-text="Ya, Hapus!">
                                                                     @csrf
                                                                     @method('DELETE')
                                                                     <button type="submit" class="btn btn-dark btn-sm" title="Hapus Transaksi"><i class="bi bi-trash3-fill"></i></button>
@@ -124,7 +133,12 @@
                                                         @endif
                                                     @else
                                                         @can('restore', $purchase)
-                                                            <form action="{{ route('karung.purchases.restore', $purchase->id) }}" method="POST" class="d-inline restore-form">
+                                                            <form action="{{ route('karung.purchases.restore', $purchase->id) }}" method="POST" class="d-inline needs-confirmation"
+                                                                  data-confirm-icon="question"
+                                                                  data-confirm-title="Pulihkan Transaksi?"
+                                                                  data-confirm-text="Transaksi akan dikembalikan dan stok disesuaikan."
+                                                                  data-confirm-button-text="Ya, Pulihkan!"
+                                                                  data-confirm-button-color="#198754">
                                                                 @csrf
                                                                 <button type="submit" class="btn btn-success btn-sm" title="Pulihkan Transaksi"><i class="bi bi-arrow-counterclockwise"></i></button>
                                                             </form>
@@ -148,68 +162,11 @@
                 </div>
             </div>
         </div>
+
+        @include('karung::components.payment-modal')
     </x-module-layout>
 
     <x-slot name="scripts">
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                // Fungsi konfirmasi untuk form dengan class .delete-form, .cancel-form, .restore-form
-                function setupConfirmation(selector, config) {
-                    document.querySelectorAll(selector).forEach(form => {
-                        form.addEventListener('submit', function(event) {
-                            event.preventDefault();
-                            Swal.fire(config).then((result) => { if (result.isConfirmed) { form.submit(); } });
-                        });
-                    });
-                }
-
-                setupConfirmation('.delete-form', { title: 'PERINGATAN!', text: "Menghapus transaksi akan menyembunyikannya dari daftar. Anda yakin?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33', confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal' });
-                setupConfirmation('.cancel-form', { title: 'Anda yakin?', text: "Transaksi ini akan dibatalkan. Aksi ini tidak dapat diurungkan.", icon: 'question', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Ya, Batalkan!', cancelButtonText: 'Tidak' });
-                setupConfirmation('.restore-form', { title: 'Pulihkan Transaksi?', text: "Transaksi akan dikembalikan dan stok disesuaikan.", icon: 'question', showCancelButton: true, confirmButtonColor: '#198754', cancelButtonColor: '#6c757d', confirmButtonText: 'Ya, Pulihkan!', cancelButtonText: 'Batal' });
-
-                // Script untuk tombol bayar
-                document.querySelectorAll('.pay-button').forEach(button => {
-                    button.addEventListener('click', function (event) {
-                        const url = this.dataset.url;
-                        const sisaTagihan = parseFloat(this.dataset.sisa);
-                        const invoice = this.dataset.invoice;
-
-                        Swal.fire({
-                            title: 'Update Pembayaran',
-                            html: `
-                                <p class="mb-1">Kode Pembelian: <strong>#${invoice}</strong></p>
-                                <p>Sisa Tagihan: <strong>Rp ${new Intl.NumberFormat('id-ID').format(sisaTagihan)}</strong></p>
-                                <input type="number" id="new_payment_amount" class="swal2-input" placeholder="Masukkan jumlah pembayaran" required min="0" max="${sisaTagihan}">
-                            `,
-                            icon: 'info', showCancelButton: true, confirmButtonText: 'Simpan Pembayaran', cancelButtonText: 'Batal',
-                            preConfirm: () => {
-                                const newPaymentAmount = Swal.getPopup().querySelector('#new_payment_amount').value;
-                                if (!newPaymentAmount || newPaymentAmount <= 0) {
-                                    Swal.showValidationMessage(`Jumlah pembayaran tidak valid`);
-                                } else if (parseFloat(newPaymentAmount) > sisaTagihan) {
-                                    Swal.showValidationMessage(`Pembayaran tidak boleh melebihi sisa tagihan`);
-                                }
-                                return newPaymentAmount;
-                            }
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                const form = document.createElement('form');
-                                form.method = 'POST'; form.action = url;
-                                const csrfInput = document.createElement('input');
-                                csrfInput.type = 'hidden'; csrfInput.name = '_token';
-                                csrfInput.value = '{{ csrf_token() }}';
-                                form.appendChild(csrfInput);
-                                const amountInput = document.createElement('input');
-                                amountInput.type = 'hidden'; amountInput.name = 'new_payment_amount';
-                                amountInput.value = result.value;
-                                form.appendChild(amountInput);
-                                document.body.appendChild(form);
-                                form.submit();
-                            }
-                        });
-                    });
-                });
-            });
-        </script>
+        @stack('scripts')
     </x-slot>
 </x-app-layout>
