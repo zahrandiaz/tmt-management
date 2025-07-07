@@ -3,7 +3,7 @@
 namespace App\Modules\Karung\Http\Controllers;
 
 use App\Http\Controllers\ModuleBaseController;
-use App\Modules\Karung\Models\Product;
+use App\Models\Product;
 use App\Modules\Karung\Models\SalesTransaction;
 use App\Modules\Karung\Models\SalesTransactionDetail; // Ditambahkan
 use Carbon\Carbon;
@@ -76,7 +76,7 @@ class DashboardController extends ModuleBaseController
                 ->whereIn('subject_type', [
                     'App\Modules\Karung\Models\SalesTransaction',
                     'App\Modules\Karung\Models\PurchaseTransaction',
-                    'App\Modules\Karung\Models\Product',
+                    'App\Models\Product',
                 ])
                 ->latest()
                 ->limit(5)

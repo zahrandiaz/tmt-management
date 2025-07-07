@@ -5,9 +5,9 @@ namespace App\Modules\Karung\Http\Controllers;
 use App\Http\Controllers\ModuleBaseController;
 use App\Modules\Karung\Http\Requests\StorePurchaseTransactionRequest;
 use App\Modules\Karung\Http\Requests\UpdatePurchaseTransactionRequest;
-use App\Modules\Karung\Models\Product;
+use App\Models\Product;
 use App\Modules\Karung\Models\PurchaseTransaction;
-use App\Modules\Karung\Models\Supplier;
+use App\Models\Supplier;
 use App\Modules\Karung\Services\TransactionService;
 use Illuminate\Http\Request;
 

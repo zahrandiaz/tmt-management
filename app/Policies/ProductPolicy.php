@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Modules\Karung\Models\Product;
+use App\Models\Product;
 use Illuminate\Auth\Access\Response;
 
 class ProductPolicy
