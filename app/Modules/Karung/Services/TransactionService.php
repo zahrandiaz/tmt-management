@@ -3,11 +3,11 @@
 namespace App\Modules\Karung\Services;
 
 use App\Services\StockManagementService;
-use App\Modules\Karung\Models\Customer;
-use App\Modules\Karung\Models\Product;
+use App\Models\Customer;
+use App\Models\Product;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction;
-use App\Modules\Karung\Models\Supplier;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;

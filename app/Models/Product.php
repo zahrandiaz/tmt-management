@@ -1,11 +1,16 @@
 <?php
 
-namespace App\Modules\Karung\Models;
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use App\Models\ProductCategory;
+use App\Models\ProductType;
+use App\Models\Supplier;
+use App\Modules\Karung\Models\PurchaseReturnDetail;
+use App\Modules\Karung\Models\SalesReturnDetail;
 use App\Modules\Karung\Models\SalesTransactionDetail;
 
 class Product extends Model

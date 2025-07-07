@@ -4,7 +4,7 @@ namespace App\Modules\Karung\Http\Controllers;
 
 use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request;
-use App\Modules\Karung\Models\Product;
+use App\Models\Product;
 use App\Modules\Karung\Models\StockAdjustment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;

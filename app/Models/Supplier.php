@@ -1,40 +1,41 @@
 <?php
 
-namespace App\Modules\Karung\Models; // PASTIKAN NAMESPACE INI BENAR
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
-// [BARU] Tambahkan use statement untuk model SalesTransaction
-use App\Modules\Karung\Models\SalesTransaction;
+// [BARU] Tambahkan use statement untuk model PurchaseTransaction
+use App\Modules\Karung\Models\PurchaseTransaction;
 
-class Customer extends Model
+class Supplier extends Model
 {
     use HasFactory;
     // [BARU] Tambahkan trait ini
     use LogsActivity;
 
-    protected $table = 'karung_customers';
+    protected $table = 'karung_suppliers';
 
     protected $fillable = [
         'business_unit_id',
-        'customer_code',
+        'supplier_code',
         'name',
+        'contact_person',
         'phone_number',
         'email',
         'address',
     ];
 
-    public function salesTransactions()
+    public function purchaseTransactions()
     {
-        return $this->hasMany(SalesTransaction::class, 'customer_id');
+        return $this->hasMany(PurchaseTransaction::class, 'supplier_id');
     }
 
-    // Relasi ke Penjualan (jika diperlukan nanti)
-    // public function salesTransactions()
+    // Relasi ke Pembelian (jika diperlukan nanti)
+    // public function purchases()
     // {
-    //     return $this->hasMany(SalesTransaction::class, 'customer_id');
+    //     return $this->hasMany(PurchaseTransaction::class, 'supplier_id');
     // }
     // [BARU] Tambahkan method ini untuk kustomisasi log produk
     public function getActivitylogOptions(): LogOptions

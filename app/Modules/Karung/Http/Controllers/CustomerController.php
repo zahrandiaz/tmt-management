@@ -2,7 +2,7 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Modules\Karung\Models\Customer; // Pastikan ini sudah benar
+use App\Models\Customer;
 use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request; // Mungkin akan kita gunakan nanti
 use Illuminate\Validation\Rule; // Untuk validasi unique yang lebih advance

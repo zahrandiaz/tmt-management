@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Modules\Karung\Models\Supplier;
-use App\Modules\Karung\Models\Customer;
+use App\Models\Supplier;
+use App\Models\Customer;
 
 class DefaultDataSeeder extends Seeder
 {

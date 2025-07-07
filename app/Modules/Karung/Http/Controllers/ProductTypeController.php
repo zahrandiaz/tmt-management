@@ -2,7 +2,7 @@
 
 namespace App\Modules\Karung\Http\Controllers;
 
-use App\Modules\Karung\Models\ProductType;
+use App\Models\ProductType;
 use App\Http\Controllers\ModuleBaseController;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule; // Untuk validasi unique yang lebih advance

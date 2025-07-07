@@ -3,6 +3,7 @@
 namespace App\Modules\Karung\Models;
 
 use App\Models\User; // Menggunakan model User global
+use App\Models\Customer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str; // <-- [TAMBAHKAN]
