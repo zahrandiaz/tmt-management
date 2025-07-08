@@ -1,18 +1,20 @@
 <?php
 
-namespace App\Modules\Karung\Services;
+namespace App\Services;
 
 use App\Services\StockManagementService;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesTransaction;
+use App\Modules\KarungCabang\Models\SalesTransaction as SalesTransactionCabang;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Laravel\Facades\Image;
+use Illuminate\Database\Eloquent\Model;
 
 class TransactionService
 {
@@ -30,7 +32,7 @@ class TransactionService
      * @return SalesTransaction
      * @throws \Exception
      */
-    public function createSale(Request $request): SalesTransaction
+    public function createSale(Request $request, int $businessUnitId): Model
     {
         $validatedData = $request->validated();
         $productIds = collect($validatedData['details'])->pluck('product_id');
@@ -44,14 +46,19 @@ class TransactionService
             }
         }
 
-        return DB::transaction(function () use ($request, $validatedData, $products) {
+        return DB::transaction(function () use ($request, $validatedData, $products, $businessUnitId) {
+            // Pilih model berdasarkan ID unit bisnis
+            $transactionModel = ($businessUnitId == 1) 
+                ? SalesTransaction::class 
+                : SalesTransactionCabang::class;
+            
             $customerId = $validatedData['customer_id'] ?? Customer::where('name', 'Pelanggan Umum')->first()->id;
 
             $totalAmount = collect($validatedData['details'])->sum(fn($d) => $d['quantity'] * $d['selling_price_at_transaction']);
             $amountPaid = $validatedData['payment_status'] === 'Lunas' ? $totalAmount : ($request->input('amount_paid', 0));
-
-            $sale = SalesTransaction::create([
-                'business_unit_id' => 1,
+            
+            $sale = $transactionModel::create([
+                'business_unit_id' => $businessUnitId,
                 'customer_id' => $customerId,
                 'transaction_date' => $validatedData['transaction_date'],
                 'notes' => $validatedData['notes'],
@@ -99,7 +106,7 @@ class TransactionService
      * @param SalesTransaction $sale
      * @return SalesTransaction
      */
-    public function updateSale(Request $request, SalesTransaction $sale): SalesTransaction
+    public function updateSale(Request $request, Model $sale): Model
     {
         $validatedData = $request->validated();
 
@@ -263,7 +270,7 @@ class TransactionService
     /**
      * Membatalkan transaksi penjualan.
      */
-    public function cancelSale(SalesTransaction $sale): void
+    public function cancelSale(Model $sale): void
     {
         DB::transaction(function () use ($sale) {
             $this->stockService->handleSaleCancellation($sale);
@@ -276,7 +283,7 @@ class TransactionService
     /**
      * Memulihkan transaksi penjualan yang dihapus/dibatalkan.
      */
-    public function restoreSale(SalesTransaction $sale): void
+    public function restoreSale(Model $sale): void
     {
         DB::transaction(function () use ($sale) {
             $this->stockService->handleSaleCreation($sale->details->toArray());
@@ -289,7 +296,7 @@ class TransactionService
     /**
      * Menghapus (soft delete) transaksi penjualan.
      */
-    public function destroySale(SalesTransaction $sale): void
+    public function destroySale(Model $sale): void
     {
         DB::transaction(function () use ($sale) {
             $this->stockService->handleSaleCancellation($sale);

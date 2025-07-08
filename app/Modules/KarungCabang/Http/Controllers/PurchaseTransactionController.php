@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Karung\Http\Controllers;
+namespace App\Modules\KarungCabang\Http\Controllers;
 
 use App\Http\Controllers\ModuleBaseController;
 use App\Modules\Karung\Http\Requests\StorePurchaseTransactionRequest;

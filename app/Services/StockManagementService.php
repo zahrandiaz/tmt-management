@@ -4,10 +4,7 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\Setting;
-use App\Modules\Karung\Models\PurchaseTransaction;
-use App\Modules\Karung\Models\SalesTransaction;
-use App\Modules\Karung\Models\SalesReturn;
-use App\Modules\Karung\Models\PurchaseReturn;
+use Illuminate\Database\Eloquent\Model; // <-- TAMBAHKAN INI
 
 class StockManagementService
 {
@@ -15,9 +12,10 @@ class StockManagementService
 
     public function __construct()
     {
-        $this->isStockManagementActive = Setting::where('business_unit_id', 1)
-            ->where('setting_key', 'automatic_stock_management')
-            ->value('setting_value') == 'true';
+        // TODO: Nanti, logika ini perlu diperbarui agar bisa menangani pengaturan
+        // dari business_unit_id yang berbeda secara dinamis.
+        // Untuk sekarang, kita asumsikan pengaturan 'true' berlaku untuk semua.
+        $this->isStockManagementActive = true; 
     }
 
     public function isStockManagementActive(): bool
@@ -34,7 +32,8 @@ class StockManagementService
         }
     }
 
-    public function handlePurchaseCancellation(PurchaseTransaction $purchase): void
+    // Ganti type-hint menjadi Model
+    public function handlePurchaseCancellation(Model $purchase): void
     {
         if (!$this->isStockManagementActive()) return;
         foreach ($purchase->details as $detail) {
@@ -43,7 +42,8 @@ class StockManagementService
         }
     }
 
-    public function handlePurchaseUpdate(PurchaseTransaction $purchase, array $newDetails): void
+    // Ganti type-hint menjadi Model
+    public function handlePurchaseUpdate(Model $purchase, array $newDetails): void
     {
         if (!$this->isStockManagementActive()) return;
         $this->handlePurchaseCancellation($purchase);
@@ -59,7 +59,8 @@ class StockManagementService
         }
     }
 
-    public function handleSaleCancellation(SalesTransaction $sale): void
+    // Ganti type-hint menjadi Model
+    public function handleSaleCancellation(Model $sale): void
     {
         if (!$this->isStockManagementActive()) return;
         foreach ($sale->details as $detail) {
@@ -68,23 +69,18 @@ class StockManagementService
         }
     }
 
-    public function handleSaleUpdate(SalesTransaction $sale, array $newDetails): void
+    // Ganti type-hint menjadi Model
+    public function handleSaleUpdate(Model $sale, array $newDetails): void
     {
         if (!$this->isStockManagementActive()) return;
         $this->handleSaleCancellation($sale);
         $this->handleSaleCreation($newDetails);
     }
 
-    /**
-     * [BARU v1.27] Menangani stok untuk retur penjualan.
-     * Stok produk akan ditambah (dikembalikan ke inventaris).
-     */
-    public function handleSaleReturn(SalesReturn $salesReturn): void
+    // Ganti type-hint menjadi Model
+    public function handleSaleReturn(Model $salesReturn): void
     {
-        if (!$this->isStockManagementActive()) {
-            return;
-        }
-
+        if (!$this->isStockManagementActive()) return;
         foreach ($salesReturn->details as $detail) {
             $product = Product::find($detail->product_id);
             if ($product) {
@@ -93,16 +89,10 @@ class StockManagementService
         }
     }
 
-    /**
-     * [BARU v1.27] Menangani stok untuk retur pembelian.
-     * Stok produk akan dikurangi dari inventaris.
-     */
-    public function handlePurchaseReturn(PurchaseReturn $purchaseReturn): void
+    // Ganti type-hint menjadi Model
+    public function handlePurchaseReturn(Model $purchaseReturn): void
     {
-        if (!$this->isStockManagementActive()) {
-            return;
-        }
-
+        if (!$this->isStockManagementActive()) return;
         foreach ($purchaseReturn->details as $detail) {
             $product = Product::find($detail->product_id);
             if ($product) {

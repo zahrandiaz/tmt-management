@@ -3,6 +3,7 @@
 namespace App\Modules\Karung\Models;
 
 use App\Models\User;
+use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 

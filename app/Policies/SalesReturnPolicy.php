@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Modules\Karung\Models\SalesReturn;
+use Illuminate\Database\Eloquent\Model; // <-- UBAH INI
 
 class SalesReturnPolicy
 {
@@ -18,7 +18,8 @@ class SalesReturnPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, SalesReturn $salesReturn): bool
+    // Ganti 'SalesReturn' menjadi 'Model'
+    public function view(User $user, Model $salesReturn): bool
     {
         return $user->can('karung.manage_returns');
     }
@@ -34,7 +35,8 @@ class SalesReturnPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, SalesReturn $salesReturn): bool
+    // Ganti 'SalesReturn' menjadi 'Model'
+    public function update(User $user, Model $salesReturn): bool
     {
         return $user->can('karung.manage_returns');
     }
@@ -42,7 +44,8 @@ class SalesReturnPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, SalesReturn $salesReturn): bool
+    // Ganti 'SalesReturn' menjadi 'Model'
+    public function delete(User $user, Model $salesReturn): bool
     {
         return $user->can('karung.manage_returns');
     }
@@ -50,7 +53,8 @@ class SalesReturnPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, SalesReturn $salesReturn): bool
+    // Ganti 'SalesReturn' menjadi 'Model'
+    public function restore(User $user, Model $salesReturn): bool
     {
         return $user->can('karung.manage_returns');
     }
@@ -58,7 +62,8 @@ class SalesReturnPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, SalesReturn $salesReturn): bool
+    // Ganti 'SalesReturn' menjadi 'Model'
+    public function forceDelete(User $user, Model $salesReturn): bool
     {
         return $user->can('karung.manage_returns');
     }

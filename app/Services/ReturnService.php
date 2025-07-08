@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Modules\Karung\Services;
+namespace App\Services;
 
-use App\Services\StockManagementService;
 use App\Modules\Karung\Models\PurchaseReturn;
 use App\Modules\Karung\Models\PurchaseTransaction;
 use App\Modules\Karung\Models\SalesReturn;
 use App\Modules\Karung\Models\SalesTransaction;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class ReturnService
@@ -21,18 +21,20 @@ class ReturnService
 
     /**
      * Membuat data retur penjualan dan memproses logika terkait.
-     *
-     * @param array $validatedData
-     * @param SalesTransaction $salesTransaction
-     * @return SalesReturn
-     * @throws \Exception
+     * Menggunakan Model sebagai type-hint agar fleksibel.
      */
-    public function createSalesReturn(array $validatedData, SalesTransaction $salesTransaction): SalesReturn
+    public function createSalesReturn(array $validatedData, Model $salesTransaction): Model
     {
         return DB::transaction(function () use ($validatedData, $salesTransaction) {
+            // Logika untuk memilih model SalesReturn yang benar (Pusat atau Cabang)
+            $salesReturnModel = ($salesTransaction->business_unit_id == 1)
+                ? SalesReturn::class
+                : \App\Modules\KarungCabang\Models\SalesReturn::class;
+
             $totalReturnAmount = 0;
 
-            $salesReturn = SalesReturn::create([
+            $salesReturn = $salesReturnModel::create([
+                'business_unit_id' => $salesTransaction->business_unit_id,
                 'return_code' => 'RTS-' . Carbon::now()->format('YmdHis'),
                 'sales_transaction_id' => $salesTransaction->id,
                 'customer_id' => $salesTransaction->customer_id,
@@ -47,10 +49,10 @@ class ReturnService
                 if (!$originalDetail || $item['return_quantity'] > $originalDetail->quantity) {
                     throw new \Exception("Jumlah retur untuk produk {$originalDetail->product->name} melebihi jumlah pembelian.");
                 }
-                
+
                 $subtotal = $originalDetail->selling_price_at_transaction * $item['return_quantity'];
                 $totalReturnAmount += $subtotal;
-                
+
                 $salesReturn->details()->create([
                     'product_id' => $item['product_id'],
                     'quantity' => $item['return_quantity'],
@@ -61,11 +63,9 @@ class ReturnService
 
             $salesReturn->total_amount = $totalReturnAmount;
             $salesReturn->save();
-            
-            // Panggil service lain untuk handle stok
+
             $this->stockManagementService->handleSaleReturn($salesReturn);
 
-            // Logika penyesuaian finansial
             $salesTransaction->total_amount -= $totalReturnAmount;
             if ($salesTransaction->amount_paid >= $salesTransaction->total_amount) {
                 $salesTransaction->payment_status = 'Lunas';
@@ -78,18 +78,19 @@ class ReturnService
 
     /**
      * Membuat data retur pembelian dan memproses logika terkait.
-     *
-     * @param array $validatedData
-     * @param PurchaseTransaction $purchaseTransaction
-     * @return PurchaseReturn
-     * @throws \Exception
+     * Menggunakan Model sebagai type-hint agar fleksibel.
      */
-    public function createPurchaseReturn(array $validatedData, PurchaseTransaction $purchaseTransaction): PurchaseReturn
+    public function createPurchaseReturn(array $validatedData, Model $purchaseTransaction): Model
     {
         return DB::transaction(function () use ($validatedData, $purchaseTransaction) {
+            // Logika untuk memilih model PurchaseReturn yang benar (Pusat atau Cabang)
+            $purchaseReturnModel = ($purchaseTransaction->business_unit_id == 1)
+                ? PurchaseReturn::class
+                : \App\Modules\KarungCabang\Models\PurchaseReturn::class;
+
             $totalReturnAmount = 0;
 
-            $purchaseReturn = PurchaseReturn::create([
+            $purchaseReturn = $purchaseReturnModel::create([
                 'return_code' => 'RTP-' . Carbon::now()->format('YmdHis'),
                 'purchase_transaction_id' => $purchaseTransaction->id,
                 'supplier_id' => $purchaseTransaction->supplier_id,
@@ -100,12 +101,9 @@ class ReturnService
             ]);
 
             foreach ($validatedData['items'] as $item) {
-                $originalDetail = \App\Modules\Karung\Models\PurchaseTransactionDetail::find($item['purchase_transaction_detail_id']);
+                $originalDetail = $purchaseTransaction->details()->find($item['purchase_transaction_detail_id']);
 
-                if (!$originalDetail || $originalDetail->purchase_transaction_id !== $purchaseTransaction->id) {
-                    throw new \Exception("Terjadi inkonsistensi data item retur.");
-                }
-                if ($item['return_quantity'] > $originalDetail->quantity) {
+                if (!$originalDetail || $item['return_quantity'] > $originalDetail->quantity) {
                     throw new \Exception("Jumlah retur melebihi jumlah pembelian.");
                 }
 
@@ -122,17 +120,15 @@ class ReturnService
 
             $purchaseReturn->total_amount = $totalReturnAmount;
             $purchaseReturn->save();
-            
-            // Panggil service lain untuk handle stok
+
             $this->stockManagementService->handlePurchaseReturn($purchaseReturn);
-            
-            // Logika penyesuaian finansial
+
             $purchaseTransaction->total_amount -= $totalReturnAmount;
             if ($purchaseTransaction->amount_paid >= $purchaseTransaction->total_amount) {
                 $purchaseTransaction->payment_status = 'Lunas';
             }
             $purchaseTransaction->save();
-            
+
             return $purchaseReturn;
         });
     }

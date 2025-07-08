@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Modules\Karung\Http\Controllers;
+namespace App\Modules\KarungCabang\Http\Controllers;
 
 use App\Http\Controllers\ModuleBaseController;
-use App\Modules\Karung\Http\Requests\StoreSalesTransactionRequest;
-use App\Modules\Karung\Http\Requests\UpdateSalesTransactionRequest;
+use App\Modules\KarungCabang\Http\Requests\StoreSalesTransactionRequest;
+use App\Modules\KarungCabang\Http\Requests\UpdateSalesTransactionRequest;
 use App\Models\Customer;
 use App\Models\Product;
-use App\Modules\Karung\Models\SalesTransaction;
+use App\Modules\KarungCabang\Models\SalesTransaction;
 use App\Models\Setting;
 use App\Services\TransactionService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -27,9 +27,10 @@ class SalesTransactionController extends ModuleBaseController
     {
         $this->authorize('viewAny', SalesTransaction::class);
         $status = $request->query('status', 'Completed');
+        
         $query = SalesTransaction::with(['customer', 'details.product'])
-                ->where('status', $status)
-                ->where('business_unit_id', 1); // <-- TAMBAHKAN FILTER INI
+            ->where('status', $status)
+            ->where('business_unit_id', 2); // Filter untuk Karung Cabang
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
             $query->where(function ($q) use ($searchTerm) {
@@ -40,25 +41,26 @@ class SalesTransactionController extends ModuleBaseController
             });
         }
         $sales = $query->latest()->paginate(15);
-        return view('karung::sales.index', compact('sales', 'status'));
+        return view('karungcabang::sales.index', compact('sales', 'status'));
     }
 
     public function create()
     {
         $this->authorize('create', SalesTransaction::class);
         $customers = Customer::orderBy('name', 'asc')->get();
-        $products = Product::where('is_active', true)
+        $products = Product::where('business_unit_id', 2) // Filter untuk Karung Cabang
+            ->where('is_active', true)
             ->where('stock', '>', 0)
             ->orderBy('name', 'asc')->get();
-        return view('karung::sales.create', compact('customers', 'products'));
+        return view('karungcabang::sales.create', compact('customers', 'products'));
     }
 
     public function store(StoreSalesTransactionRequest $request)
     {
         $this->authorize('create', SalesTransaction::class);
         try {
-            $this->transactionService->createSale($request, 1);
-            return redirect()->route('karung.sales.index')->with('success', 'Transaksi penjualan baru berhasil disimpan!');
+            $this->transactionService->createSale($request, 2); // ID untuk Karung Cabang
+            return redirect()->route('karungcabang.sales.index')->with('success', 'Transaksi penjualan baru berhasil disimpan!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
         }
@@ -68,7 +70,7 @@ class SalesTransactionController extends ModuleBaseController
     {
         $this->authorize('view', $sale);
         $sale->load(['customer', 'user', 'details.product', 'returns']);
-        return view('karung::sales.show', compact('sale'));
+        return view('karungcabang::sales.show', compact('sale'));
     }
 
     public function edit(SalesTransaction $sale)
@@ -76,12 +78,13 @@ class SalesTransactionController extends ModuleBaseController
         $this->authorize('update', $sale);
         $sale->load(['details.product', 'operationalExpenses']);
         $customers = Customer::orderBy('name', 'asc')->get();
-        $activeProducts = Product::where('is_active', true)
-                                      ->where('stock', '>', 0)
-                                      ->orderBy('name', 'asc')->get();
+        $activeProducts = Product::where('business_unit_id', 2) // Filter untuk Karung Cabang
+                    ->where('is_active', true)
+                    ->where('stock', '>', 0)
+                    ->orderBy('name', 'asc')->get();
         $existingProducts = $sale->details->pluck('product');
         $products = $activeProducts->merge($existingProducts)->unique('id');
-        return view('karung::sales.edit', compact('sale', 'customers', 'products'));
+        return view('karungcabang::sales.edit', compact('sale', 'customers', 'products'));
     }
 
     public function update(UpdateSalesTransactionRequest $request, SalesTransaction $sale)
@@ -89,7 +92,7 @@ class SalesTransactionController extends ModuleBaseController
         $this->authorize('update', $sale);
         try {
             $this->transactionService->updateSale($request, $sale);
-            return redirect()->route('karung.sales.index')->with('success', 'Transaksi penjualan berhasil diperbarui!');
+            return redirect()->route('karungcabang.sales.index')->with('success', 'Transaksi penjualan berhasil diperbarui!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
         }
@@ -100,10 +103,10 @@ class SalesTransactionController extends ModuleBaseController
         $this->authorize('restore', $sale);
         try {
             $this->transactionService->restoreSale($sale);
-            return redirect()->route('karung.sales.index', ['status' => 'Deleted'])
+            return redirect()->route('karungcabang.sales.index', ['status' => 'Deleted'])
                              ->with('success', "Transaksi #{$sale->invoice_number} berhasil dipulihkan.");
         } catch (\Exception $e) {
-            return redirect()->route('karung.sales.index', ['status' => 'Deleted'])
+            return redirect()->route('karungcabang.sales.index', ['status' => 'Deleted'])
                              ->with('error', 'Terjadi kesalahan saat memulihkan transaksi: ' . $e->getMessage());
         }
     }
@@ -113,9 +116,9 @@ class SalesTransactionController extends ModuleBaseController
         $this->authorize('cancel', $sale);
         try {
             $this->transactionService->cancelSale($sale);
-            return redirect()->route('karung.sales.index')->with('success', "Transaksi penjualan dengan invoice #{$sale->invoice_number} berhasil dibatalkan.");
+            return redirect()->route('karungcabang.sales.index')->with('success', "Transaksi penjualan dengan invoice #{$sale->invoice_number} berhasil dibatalkan.");
         } catch (\Exception $e) {
-            return redirect()->route('karung.sales.index')->with('error', 'Terjadi kesalahan saat membatalkan transaksi: ' . $e->getMessage());
+            return redirect()->route('karungcabang.sales.index')->with('error', 'Terjadi kesalahan saat membatalkan transaksi: ' . $e->getMessage());
         }
     }
 
@@ -124,9 +127,9 @@ class SalesTransactionController extends ModuleBaseController
         $this->authorize('delete', $sale);
         try {
             $this->transactionService->destroySale($sale);
-            return redirect()->route('karung.sales.index')->with('success', "Transaksi #{$sale->invoice_number} berhasil dihapus.");
+            return redirect()->route('karungcabang.sales.index')->with('success', "Transaksi #{$sale->invoice_number} berhasil dihapus.");
         } catch (\Exception $e) {
-            return redirect()->route('karung.sales.index')->with('error', 'Terjadi kesalahan saat menghapus transaksi: ' . $e->getMessage());
+            return redirect()->route('karungcabang.sales.index')->with('error', 'Terjadi kesalahan saat menghapus transaksi: ' . $e->getMessage());
         }
     }
 
@@ -141,7 +144,7 @@ class SalesTransactionController extends ModuleBaseController
             $url = route('receipt.verify', $sale->uuid);
             $qrCode = base64_encode(QrCode::format('svg')->size(80)->generate($url));
         }
-        return view('karung::sales.receipts.thermal_receipt', compact('sale', 'settings', 'qrCode'));
+        return view('karungcabang::sales.receipts.thermal_receipt', compact('sale', 'settings', 'qrCode'));
     }
 
     public function downloadPdf(SalesTransaction $sale)
@@ -155,7 +158,7 @@ class SalesTransactionController extends ModuleBaseController
             $url = route('receipt.verify', $sale->uuid);
             $qrCode = base64_encode(QrCode::format('svg')->size(80)->generate($url));
         }
-        $pdf = Pdf::loadView('karung::sales.receipts.pdf_receipt', compact('sale', 'settings', 'qrCode'));
+        $pdf = Pdf::loadView('karungcabang::sales.receipts.pdf_receipt', compact('sale', 'settings', 'qrCode'));
         $safeInvoiceNumber = str_replace('/', '-', $sale->invoice_number);
         $fileName = 'struk-' . strtolower($safeInvoiceNumber) . '.pdf';
         return $pdf->stream($fileName);
