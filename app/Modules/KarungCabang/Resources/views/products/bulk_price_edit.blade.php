@@ -8,7 +8,7 @@
 
     <x-module-layout>
         <x-slot name="sidebar">
-            @include('karung::layouts.partials.sidebar')
+            @include('karungcabang::layouts.partials.sidebar')
         </x-slot>
 
         {{-- ================= KONTEN UTAMA HALAMAN ================= --}}
@@ -18,14 +18,14 @@
                     <div class="card">
                         <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Update Harga Beli Massal</h5>
-                            <a href="{{ route('karung.products.index') }}" class="btn btn-dark btn-sm">
+                            <a href="{{ route('karungcabang.products.index') }}" class="btn btn-dark btn-sm">
                                 <i class="bi bi-arrow-left-circle-fill"></i> Kembali ke Daftar Produk
                             </a>
                         </div>
                         <div class="card-body">
                             <x-flash-message />
 
-                            <form action="{{ route('karung.products.bulk-price.edit') }}" method="GET" class="mb-4 p-3 border rounded bg-light">
+                            <form action="{{ route('karungcabang.products.bulk-price.edit') }}" method="GET" class="mb-4 p-3 border rounded bg-light">
                                 <div class="row g-3 align-items-end">
                                     <div class="col-md-5">
                                         <label for="search" class="form-label">Cari Nama / SKU</label>
@@ -48,7 +48,7 @@
                                 </div>
                             </form>
 
-                            <form action="{{ route('karung.products.bulk-price.update') }}" method="POST">
+                            <form action="{{ route('karungcabang.products.bulk-price.update') }}" method="POST">
                                 @csrf
                                 <div class="table-responsive">
                                     <table class="table table-striped table-hover table-bordered">

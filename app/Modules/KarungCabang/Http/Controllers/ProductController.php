@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Karung\Http\Controllers;
+namespace App\Modules\KarungCabang\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductCategory;
@@ -24,7 +24,7 @@ class ProductController extends ModuleBaseController
     {
         // PENTING: Sama seperti sebelumnya, untuk sekarang kita ambil SEMUA produk.
         // Nanti, ini HARUS difilter berdasarkan 'business_unit_id' yang aktif.
-        $currentBusinessUnitId = 1; // Contoh hardcode
+        $currentBusinessUnitId = 2; // Contoh hardcode
 
         // Mulai query dengan eager loading
         $query = Product::with(['category', 'type']);
@@ -46,7 +46,7 @@ class ProductController extends ModuleBaseController
         $products = $query->latest()->paginate(10);
 
         // Mengirim data $products ke view
-        return view('karung::products.index', compact('products'));
+        return view('karungcabang::products.index', compact('products'));
     }
 
     public function create()
@@ -60,14 +60,14 @@ class ProductController extends ModuleBaseController
         $types = ProductType::orderBy('name', 'asc')->get();       // Ambil semua jenis, urutkan berdasarkan nama
         $suppliers = Supplier::orderBy('name', 'asc')->get();     // Ambil semua supplier, urutkan berdasarkan nama
 
-        return view('karung::products.create', compact('categories', 'types', 'suppliers'));
+        return view('karungcabang::products.create', compact('categories', 'types', 'suppliers'));
     }
 
     public function store(Request $request)
     {
         // Tentukan business_unit_id (sementara hardcode, nanti harus dinamis)
         // TODO: Dapatkan business_unit_id dari sesi pengguna atau instansi bisnis yang aktif
-        $currentBusinessUnitId = 1;
+        $currentBusinessUnitId = 2;
 
         $validatedData = $request->validate([
             'name' => [
@@ -135,7 +135,7 @@ class ProductController extends ModuleBaseController
 
         Product::create($dataToStore);
 
-        return redirect()->route('karung.products.index')
+        return redirect()->route('karungcabang.products.index')
                          ->with('success', 'Produk baru berhasil ditambahkan!');
     }
 
@@ -149,7 +149,7 @@ class ProductController extends ModuleBaseController
         $types = ProductType::orderBy('name', 'asc')->get();
         $suppliers = Supplier::orderBy('name', 'asc')->get();
 
-        return view('karung::products.edit', compact('product', 'categories', 'types', 'suppliers'));
+        return view('karungcabang::products.edit', compact('product', 'categories', 'types', 'suppliers'));
     }
 
     public function update(Request $request, Product $product)
@@ -157,7 +157,7 @@ class ProductController extends ModuleBaseController
         // Tentukan business_unit_id (sementara hardcode, nanti harus dinamis)
         // TODO: Dapatkan business_unit_id dari sesi pengguna atau instansi bisnis yang aktif
         // dan pastikan $product ini memang milik business_unit_id tersebut sebelum diupdate.
-        $currentBusinessUnitId = 1;
+        $currentBusinessUnitId = 2;
 
         // Validasi data
         $validatedData = $request->validate([
@@ -213,7 +213,7 @@ class ProductController extends ModuleBaseController
         // Lakukan update pada data produk
         $product->update($validatedData);
 
-        return redirect()->route('karung.products.index')
+        return redirect()->route('karungcabang.products.index')
                          ->with('success', 'Data produk berhasil diperbarui!');
     }
 
@@ -236,15 +236,15 @@ class ProductController extends ModuleBaseController
                 Storage::disk('public')->delete($imagePath);
             }
 
-            return redirect()->route('karung.products.index')
+            return redirect()->route('karungcabang.products.index')
                              ->with('success', "Produk '{$productName}' berhasil dihapus!");
         } catch (\Illuminate\Database\QueryException $e) {
             // Tangani error jika ada foreign key constraint
-            return redirect()->route('karung.products.index')
+            return redirect()->route('karungcabang.products.index')
                              ->with('error', "Gagal menghapus produk '{$product->name}'. Mungkin produk ini masih terhubung dengan data transaksi.");
         } catch (\Exception $e) {
             // Tangani error umum lainnya
-            return redirect()->route('karung.products.index')
+            return redirect()->route('karungcabang.products.index')
                              ->with('error', "Terjadi kesalahan saat mencoba menghapus produk '{$product->name}'.");
         }
     }
@@ -284,7 +284,7 @@ class ProductController extends ModuleBaseController
         $selectedCategoryId = $request->input('category_id');
         
         $query = Product::query();
-        $query->where('business_unit_id', 1); // Filter untuk Karung Cabang
+        $query->where('business_unit_id', 2); // Filter untuk Karung Cabang
 
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
@@ -300,7 +300,7 @@ class ProductController extends ModuleBaseController
 
         $products = $query->orderBy('name')->get();
 
-        return view('karung::products.bulk_price_edit', compact('products', 'categories', 'selectedCategoryId'));
+        return view('karungcabang::products.bulk_price_edit', compact('products', 'categories', 'selectedCategoryId'));
     }
 
     public function bulkPriceUpdate(Request $request)
@@ -328,7 +328,7 @@ class ProductController extends ModuleBaseController
             
             activity()->log("Melakukan pembaruan harga beli massal untuk " . count($validated['products']) . " produk.");
 
-            return redirect()->route('karung.products.bulk-price.edit')->with('success', 'Harga beli produk berhasil diperbarui!');
+            return redirect()->route('karungcabang.products.bulk-price.edit')->with('success', 'Harga beli produk berhasil diperbarui!');
 
         } catch (\Exception $e) {
             DB::rollBack();
