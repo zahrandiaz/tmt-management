@@ -8,7 +8,7 @@
 
     <x-module-layout>
         <x-slot name="sidebar">
-            @include('karung::layouts.partials.sidebar')
+            @include('karungcabang::layouts.partials.sidebar')
         </x-slot>
 
         {{-- ================= KONTEN UTAMA HALAMAN ================= --}}
@@ -19,11 +19,11 @@
                         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Riwayat Transaksi Penjualan</h5>
                             <div>
-                                <a href="{{ route('karung.dashboard') }}" class="btn btn-secondary btn-sm">
+                                <a href="{{ route('karungcabang.dashboard') }}" class="btn btn-secondary btn-sm">
                                     <i class="bi bi-arrow-left-circle-fill"></i> Kembali
                                 </a>
                                 @can('karung.create_sales')
-                                <a href="{{ route('karung.sales.create') }}" class="btn btn-light btn-sm">
+                                <a href="{{ route('karungcabang.sales.create') }}" class="btn btn-light btn-sm">
                                     <i class="bi bi-plus-circle-fill"></i> Catat Penjualan Baru
                                 </a>
                                 @endcan
@@ -34,14 +34,14 @@
 
                             <ul class="nav nav-tabs mb-3">
                                 <li class="nav-item">
-                                    <a class="nav-link {{ $status == 'Completed' ? 'active' : '' }}" href="{{ route('karung.sales.index', ['status' => 'Completed']) }}">Selesai</a>
+                                    <a class="nav-link {{ $status == 'Completed' ? 'active' : '' }}" href="{{ route('karungcabang.sales.index', ['status' => 'Completed']) }}">Selesai</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link {{ $status == 'Cancelled' ? 'active' : '' }}" href="{{ route('karung.sales.index', ['status' => 'Cancelled']) }}">Dibatalkan</a>
+                                    <a class="nav-link {{ $status == 'Cancelled' ? 'active' : '' }}" href="{{ route('karungcabang.sales.index', ['status' => 'Cancelled']) }}">Dibatalkan</a>
                                 </li>
                                 @can('karung.delete_sales')
                                 <li class="nav-item">
-                                    <a class="nav-link text-danger {{ $status == 'Deleted' ? 'active' : '' }}" href="{{ route('karung.sales.index', ['status' => 'Deleted']) }}">
+                                    <a class="nav-link text-danger {{ $status == 'Deleted' ? 'active' : '' }}" href="{{ route('karungcabang.sales.index', ['status' => 'Deleted']) }}">
                                         <i class="bi bi-trash-fill me-1"></i> Dihapus (Sampah)
                                     </a>
                                 </li>
@@ -49,7 +49,7 @@
                             </ul>
 
                             <div class="mb-4">
-                                <form action="{{ route('karung.sales.index') }}" method="GET">
+                                <form action="{{ route('karungcabang.sales.index') }}" method="GET">
                                     <input type="hidden" name="status" value="{{ $status }}">
                                     <div class="input-group">
                                         <input type="text" class="form-control" name="search" placeholder="Cari berdasarkan No. Invoice atau Nama Pelanggan..." value="{{ request('search') }}">
@@ -93,7 +93,7 @@
                                                 </td>
                                                 <td class="text-center">
                                                     @if($sale->status != 'Deleted')
-                                                        <a href="{{ route('karung.sales.show', $sale->id) }}" class="btn btn-info btn-sm text-white" title="Lihat Detail"><i class="bi bi-eye-fill"></i></a>
+                                                        <a href="{{ route('karungcabang.sales.show', $sale->id) }}" class="btn btn-info btn-sm text-white" title="Lihat Detail"><i class="bi bi-eye-fill"></i></a>
                                                         @if($sale->status == 'Completed')
                                                             @if($sale->payment_status == 'Belum Lunas')
                                                                 @can('managePayment', $sale)
@@ -109,10 +109,10 @@
                                                                 @endcan
                                                             @endif
                                                             @can('karung.edit_sales')
-                                                                <a href="{{ route('karung.sales.edit', $sale->id) }}" class="btn btn-warning btn-sm" title="Edit Transaksi"><i class="bi bi-pencil-square"></i></a>
+                                                                <a href="{{ route('karungcabang.sales.edit', $sale->id) }}" class="btn btn-warning btn-sm" title="Edit Transaksi"><i class="bi bi-pencil-square"></i></a>
                                                             @endcan
                                                             @can('karung.cancel_sales')
-                                                                <form action="{{ route('karung.sales.cancel', $sale->id) }}" method="POST" class="d-inline needs-confirmation"
+                                                                <form action="{{ route('karungcabang.sales.cancel', $sale->id) }}" method="POST" class="d-inline needs-confirmation"
                                                                       data-confirm-title="Anda yakin?"
                                                                       data-confirm-text="Transaksi ini akan dibatalkan. Aksi ini tidak dapat diurungkan."
                                                                       data-confirm-button-text="Ya, Batalkan!">
@@ -121,7 +121,7 @@
                                                                 </form>
                                                             @endcan
                                                             @can('karung.delete_sales')
-                                                                <form action="{{ route('karung.sales.destroy', $sale->id) }}" method="POST" class="d-inline needs-confirmation"
+                                                                <form action="{{ route('karungcabang.sales.destroy', $sale->id) }}" method="POST" class="d-inline needs-confirmation"
                                                                       data-confirm-title="PERINGATAN!"
                                                                       data-confirm-text="Menghapus transaksi akan menyembunyikannya dari daftar. Anda yakin?"
                                                                       data-confirm-button-text="Ya, Hapus!">
@@ -133,7 +133,7 @@
                                                         @endif
                                                     @else
                                                         @can('restore', $sale)
-                                                            <form action="{{ route('karung.sales.restore', $sale->id) }}" method="POST" class="d-inline needs-confirmation"
+                                                            <form action="{{ route('karungcabang.sales.restore', $sale->id) }}" method="POST" class="d-inline needs-confirmation"
                                                                   data-confirm-icon="question"
                                                                   data-confirm-title="Pulihkan Transaksi?"
                                                                   data-confirm-text="Transaksi akan dikembalikan ke status 'Completed' dan stok akan disesuaikan."

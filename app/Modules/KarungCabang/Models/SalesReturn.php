@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Karung\Models;
+namespace App\Modules\KarungCabang\Models;
 
 use App\Models\User;
 use App\Models\Customer;
